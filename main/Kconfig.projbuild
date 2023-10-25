@@ -1,0 +1,131 @@
+menu "ZH ESP-NOW Switch Configuration"
+	
+	config GPIO_RANGE_MAX
+		int
+		default 33 if IDF_TARGET_ESP32
+		default 46 if IDF_TARGET_ESP32S2
+		default 48 if IDF_TARGET_ESP32S3
+		default 18 if IDF_TARGET_ESP32C2
+		default 19 if IDF_TARGET_ESP32C3
+		default 30 if IDF_TARGET_ESP32C6
+
+	config RELAY_USING
+		bool "Enable using relay"
+		default true
+		help
+			Enable using relay.
+
+	config RELAY_PIN
+		depends on RELAY_USING
+		int "Relay GPIO number"
+		range 0 GPIO_RANGE_MAX
+		default 12
+		help
+			Relay GPIO.
+
+	choice RELAY_ON_LEVEL
+		depends on RELAY_USING
+		prompt "Relay ON level"
+		help
+			Relay ON level.
+		default RELAY_ON_LEVEL_HIGH
+		config RELAY_ON_LEVEL_HIGH
+			bool "HIGH"
+		config RELAY_ON_LEVEL_LOW
+			bool "LOW"
+			
+	endchoice
+
+	config LED_USING
+		bool "Enable using led"
+		default false
+		help
+			Enable using led.
+
+	config LED_PIN
+		depends on LED_USING
+		int "Led GPIO number"
+		range 0 GPIO_RANGE_MAX
+		default 4
+		help
+			Led GPIO.
+		
+	choice LED_ON_LEVEL
+		depends on LED_USING
+		prompt "Led ON level"
+		help
+			Led ON level.
+		default LED_ON_LEVEL_LOW
+		config LED_ON_LEVEL_HIGH
+			bool "HIGH"
+		config LED_ON_LEVEL_LOW
+			bool "LOW"
+	endchoice
+
+	config INT_BUTTON_USING
+		bool "Enable using internal button"
+		default false
+		help
+			Enable using internal button.
+
+	config INT_BUTTON_PIN
+		depends on INT_BUTTON_USING
+		int "Internal button GPIO number"
+		range 0 GPIO_RANGE_MAX
+		default 13
+		help
+			Internal button GPIO.
+		
+	choice INT_BUTTON_LEVEL
+		depends on INT_BUTTON_USING
+		prompt "Internal button trigger level"
+		help
+			Internal button trigger level.
+		default INT_BUTTON_ON_LEVEL_LOW
+		config INT_BUTTON_ON_LEVEL_HIGH
+			bool "HIGH"
+		config INT_BUTTON_ON_LEVEL_LOW
+			bool "LOW"
+	endchoice
+
+	config EXT_BUTTON_USING
+		bool "Enable using external button"
+		default false
+		help
+			Enable using external button.
+
+	config EXT_BUTTON_PIN
+		depends on EXT_BUTTON_USING
+		int "External button GPIO number"
+		range 0 GPIO_RANGE_MAX
+		default 14
+		help
+			External button GPIO.
+		
+	choice EXT_BUTTON_LEVEL
+		depends on EXT_BUTTON_USING
+		prompt "External button trigger level"
+		help
+			External button trigger level.
+		default EXT_BUTTON_ON_LEVEL_LOW
+		config EXT_BUTTON_ON_LEVEL_HIGH
+			bool "HIGH"
+		config EXT_BUTTON_ON_LEVEL_LOW
+			bool "LOW"
+	endchoice
+
+	config SENSOR_USING
+		bool "Enable using external DS18B20 sensor"
+		default false
+		help
+			Enable using external DS18B20 sensor.
+
+	config SENSOR_PIN
+		depends on SENSOR_USING
+		int "DS18B20 sensor GPIO number"
+		range 0 GPIO_RANGE_MAX
+		default 2
+		help
+			DS18B20 sensor GPIO.
+
+endmenu 
