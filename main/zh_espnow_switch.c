@@ -574,7 +574,7 @@ static void s_zh_espnow_event_handler(void *arg, esp_event_base_t event_base, in
             break;
         }
     ZH_ESPNOW_EVENT_HANDLER_EXIT:
-        free(recv_data->data); // Do not delete for prevent of memory leakage!!!
+        free(recv_data->data);
         break;
     case ZH_ESPNOW_ON_SEND_EVENT:
         break;
