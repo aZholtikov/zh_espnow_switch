@@ -24,6 +24,7 @@ Run the following command to firmware build and flash module:
 ```text
 cd your_projects_folder
 bash <(curl -Ls http://git.zh.com.ru/alexey.zholtikov/zh_espnow_switch/raw/branch/esp8266/install.sh)
+cd zh_espnow_switch
 make menuconfig
 make
 make flash
