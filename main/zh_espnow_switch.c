@@ -404,12 +404,8 @@ static void s_zh_send_ds18b20_config_message(void)
     data.device_type = ZHDT_SENSOR;
     data.payload_type = ZHPT_CONFIG;
     data.payload_data = (zh_payload_data_t)config_message;
-    for (;;)
-    {
-        zh_network_send(s_gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
-        vTaskDelay(300000 / portTICK_PERIOD_MS);
-    }
-    vTaskDelete(NULL);
+    zh_network_send(s_gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+    vTaskDelay(300000 / portTICK_PERIOD_MS);
 }
 
 static void s_zh_send_ds18b20_status_message_task(void *pvParameter)
