@@ -4,6 +4,10 @@ ESP-NOW based switch for ESP32 ESP-IDF. Alternate firmware for Tuya/SmartLife/eW
 
 There are two branches - for ESP8266 family and for ESP32 family. Please use the appropriate one.
 
+## Tested on
+
+1. ESP32 ESP-IDF v5.1.0
+
 ## Features
 
 1. Saves the last state when the power is turned off.
@@ -15,7 +19,7 @@ There are two branches - for ESP8266 family and for ESP32 family. Please use the
 
 1. For initial settings use "menuconfig -> ZH ESP-NOW Switch Configuration". After first boot all settings will be stored in NVS memory for prevente change during OTA firmware update.
 2. To restart the switch, send the "restart" command to the root topic of the switch (example - "homeassistant/espnow_switch/24-62-AB-F9-1F-A8").
-3. To update the switch firmware, send the "update" command to the root topic of the switch (example - "homeassistant/espnow_switch/70-03-9F-44-BE-F7"). The update path should be like as "https://your_server/zh_espnow_switch_esp32.bin". The time and success of the update depends on the load on WiFi channel 1. Average update time is less than one minute. The online status of the update is displayed in the root switch topic.
+3. To update the switch firmware, send the "update" command to the root topic of the switch (example - "homeassistant/espnow_switch/70-03-9F-44-BE-F7"). The update path should be like as "https://your_server/zh_espnow_switch_esp32.bin". The time and success of the update depends on the load on WiFi channel 1. Average update time is up to five minutes. The online status of the update is displayed in the root led topic.
 
 ## Build and flash
 
@@ -33,3 +37,5 @@ idf.py -p (PORT) flash
 ## Attention
 
 1. A gateway is required. For details see [zh_gateway](http://git.zh.com.ru/alexey.zholtikov/zh_gateway).
+
+Any [feedback](mailto:github@azholtikov.ru) will be gladly accepted.
