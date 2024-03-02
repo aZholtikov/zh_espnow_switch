@@ -14,12 +14,15 @@ There are two branches - for ESP8266 family and for ESP32 family. Please use the
 2. Automatically adds switch configuration to Home Assistan via MQTT discovery as a switch.
 3. Update firmware from HTTPS server via ESP-NOW.
 4. Optional support one external DS18B20 sensor.
+5. Direct or mesh work mode.
 
 ## Notes
 
-1. For initial settings use "menuconfig -> ZH ESP-NOW Switch Configuration". After first boot all settings will be stored in NVS memory for prevente change during OTA firmware update.
-2. To restart the switch, send the "restart" command to the root topic of the switch (example - "homeassistant/espnow_switch/24-62-AB-F9-1F-A8").
-3. To update the switch firmware, send the "update" command to the root topic of the switch (example - "homeassistant/espnow_switch/70-03-9F-44-BE-F7"). The update path should be like as "https://your_server/zh_espnow_switch_esp32.bin". The time and success of the update depends on the load on WiFi channel 1. Average update time is up to five minutes. The online status of the update is displayed in the root led topic.
+1. Work mode must be same with [gateway](http://git.zh.com.ru/alexey.zholtikov/zh_gateway) work mode.
+2. ESP-NOW mesh network based on the [zh_network](http://git.zh.com.ru/alexey.zholtikov/zh_network).
+3. For initial settings use "menuconfig -> ZH ESP-NOW Switch Configuration". After first boot all settings will be stored in NVS memory for prevente change during OTA firmware update.
+4. To restart the switch, send the "restart" command to the root topic of the switch (example - "homeassistant/espnow_switch/24-62-AB-F9-1F-A8").
+5. To update the switch firmware, send the "update" command to the root topic of the switch (example - "homeassistant/espnow_switch/70-03-9F-44-BE-F7"). The update path should be like as "https://your_server/zh_espnow_switch_esp32.bin". The time and success of the update depends on the load on WiFi channel 1. Average update time is up to five minutes. The online status of the update is displayed in the root led topic.
 
 ## Build and flash
 
