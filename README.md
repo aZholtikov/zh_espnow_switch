@@ -32,8 +32,10 @@ Run the following command to firmware build and flash module:
 
 ```text
 cd your_projects_folder
-bash <(curl -Ls <http://git.zh.com.ru/alexey.zholtikov/zh_espnow_switch/raw/branch/main/install.sh>)
+git clone http://git.zh.com.ru/alexey.zholtikov/zh_espnow_switch.git
 cd zh_espnow_switch
+git submodule init
+git submodule update --remote
 ```
 
 For ESP32 family:
