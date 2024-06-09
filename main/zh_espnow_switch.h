@@ -58,20 +58,35 @@
 
 typedef struct // Structure of data exchange between tasks, functions and event handlers.
 {
-    zh_switch_hardware_config_message_t hardware_config; // Storage structure of switch hardware configuration data.
-    zh_switch_status_message_t status;                   // Storage structure of switch status data.
-    volatile bool gpio_processing;                       // GPIO processing flag. @note Used to prevent a repeated interrupt from triggering during GPIO processing.
-    volatile bool gateway_is_available;                  // Gateway availability status flag. @note Used to control the tasks when the gateway connection is established / lost.
-    uint8_t gateway_mac[6];                              // Gateway MAC address.
-    zh_dht_handle_t dht_handle;                          // Unique DTH11/22 sensor handle.
-    TaskHandle_t switch_attributes_message_task;         // Unique task handle for zh_send_switsh_attributes_message_task().
-    TaskHandle_t switch_keep_alive_message_task;         // Unique task handle for zh_send_switch_keep_alive_message_task().
-    TaskHandle_t sensor_attributes_message_task;         // Unique task handle for zh_send_sensor_attributes_message_task().
-    TaskHandle_t sensor_status_message_task;             // Unique task handle for zh_send_sensor_status_message_task().
-    SemaphoreHandle_t button_pushing_semaphore;          // Unique semaphore handle for GPIO processing tasks.
-    const esp_partition_t *update_partition;             // Next update partition.
-    esp_ota_handle_t update_handle;                      // Unique OTA handle.
-    uint16_t ota_message_part_number;                    // The sequence number of the firmware upgrade part. @note Used to verify that all parts have been received.
+    struct // Storage structure of switch hardware configuration data.
+    {
+        uint8_t relay_pin;            // Relay GPIO number.
+        bool relay_on_level;          // Relay ON level. @note HIGH (true) / LOW (false).
+        uint8_t led_pin;              // Led GPIO number (if present).
+        bool led_on_level;            // Led ON level (if present). @note HIGH (true) / LOW (false).
+        uint8_t int_button_pin;       // Internal button GPIO number (if present).
+        bool int_button_on_level;     // Internal button trigger level (if present). @note HIGH (true) / LOW (false).
+        uint8_t ext_button_pin;       // External button GPIO number (if present).
+        bool ext_button_on_level;     // External button trigger level (if present). @note HIGH (true) / LOW (false).
+        uint8_t sensor_pin;           // Sensor GPIO number (if present).
+        ha_sensor_type_t sensor_type; // Sensor types (if present). @note Used to identify the sensor type by ESP-NOW gateway and send the appropriate sensor status messages to MQTT.
+    } hardware_config;
+    struct // Storage structure of switch status data.
+    {
+        ha_on_off_type_t status; // Status of the zh_espnow_switch. @note Example - ON / OFF. @attention Must be same with set on switch_config_message structure.
+    } status;
+    volatile bool gpio_processing;               // GPIO processing flag. @note Used to prevent a repeated interrupt from triggering during GPIO processing.
+    volatile bool gateway_is_available;          // Gateway availability status flag. @note Used to control the tasks when the gateway connection is established / lost.
+    uint8_t gateway_mac[6];                      // Gateway MAC address.
+    zh_dht_handle_t dht_handle;                  // Unique DTH11/22 sensor handle.
+    TaskHandle_t switch_attributes_message_task; // Unique task handle for zh_send_switsh_attributes_message_task().
+    TaskHandle_t switch_keep_alive_message_task; // Unique task handle for zh_send_switch_keep_alive_message_task().
+    TaskHandle_t sensor_attributes_message_task; // Unique task handle for zh_send_sensor_attributes_message_task().
+    TaskHandle_t sensor_status_message_task;     // Unique task handle for zh_send_sensor_status_message_task().
+    SemaphoreHandle_t button_pushing_semaphore;  // Unique semaphore handle for GPIO processing tasks.
+    const esp_partition_t *update_partition;     // Next update partition.
+    esp_ota_handle_t update_handle;              // Unique OTA handle.
+    uint16_t ota_message_part_number;            // The sequence number of the firmware upgrade part. @note Used to verify that all parts have been received.
 } switch_config_t;
 
 /**

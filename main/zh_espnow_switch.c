@@ -312,22 +312,20 @@ void zh_send_switch_attributes_message_task(void *pvParameter)
 {
     switch_config_t *switch_config = pvParameter;
     const esp_app_desc_t *app_info = get_app_description();
-    zh_attributes_message_t attributes_message = {0};
-    attributes_message.chip_type = ZH_CHIP_TYPE;
-    strcpy(attributes_message.flash_size, CONFIG_ESPTOOLPY_FLASHSIZE);
-    attributes_message.cpu_frequency = ZH_CPU_FREQUENCY;
-    attributes_message.reset_reason = (uint8_t)esp_reset_reason();
-    strcpy(attributes_message.app_name, app_info->project_name);
-    strcpy(attributes_message.app_version, app_info->version);
     zh_espnow_data_t data = {0};
     data.device_type = ZHDT_SWITCH;
     data.payload_type = ZHPT_ATTRIBUTES;
+    data.payload_data.attributes_message.chip_type = ZH_CHIP_TYPE;
+    strcpy(data.payload_data.attributes_message.flash_size, CONFIG_ESPTOOLPY_FLASHSIZE);
+    data.payload_data.attributes_message.cpu_frequency = ZH_CPU_FREQUENCY;
+    data.payload_data.attributes_message.reset_reason = (uint8_t)esp_reset_reason();
+    strcpy(data.payload_data.attributes_message.app_name, app_info->project_name);
+    strcpy(data.payload_data.attributes_message.app_version, app_info->version);
     for (;;)
     {
-        attributes_message.heap_size = esp_get_free_heap_size();
-        attributes_message.min_heap_size = esp_get_minimum_free_heap_size();
-        attributes_message.uptime = esp_timer_get_time() / 1000000;
-        data.payload_data = (zh_payload_data_t)attributes_message;
+        data.payload_data.attributes_message.heap_size = esp_get_free_heap_size();
+        data.payload_data.attributes_message.min_heap_size = esp_get_minimum_free_heap_size();
+        data.payload_data.attributes_message.uptime = esp_timer_get_time() / 1000000;
         zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
         vTaskDelay(ZH_SWITCH_ATTRIBUTES_MESSAGE_FREQUENCY * 1000 / portTICK_PERIOD_MS);
     }
@@ -336,45 +334,46 @@ void zh_send_switch_attributes_message_task(void *pvParameter)
 
 void zh_send_switch_config_message(const switch_config_t *switch_config)
 {
-    zh_switch_config_message_t switch_config_message = {0};
-    switch_config_message.unique_id = 1;
-    switch_config_message.device_class = HASWDC_SWITCH;
-    switch_config_message.payload_on = HAONOFT_ON;
-    switch_config_message.payload_off = HAONOFT_OFF;
-    switch_config_message.enabled_by_default = true;
-    switch_config_message.optimistic = false;
-    switch_config_message.qos = 2;
-    switch_config_message.retain = true;
-    zh_config_message_t config_message = {0};
-    config_message = (zh_config_message_t)switch_config_message;
     zh_espnow_data_t data = {0};
     data.device_type = ZHDT_SWITCH;
     data.payload_type = ZHPT_CONFIG;
-    data.payload_data = (zh_payload_data_t)config_message;
+    data.payload_data.config_message.switch_config_message.unique_id = 1;
+    data.payload_data.config_message.switch_config_message.device_class = HASWDC_SWITCH;
+    data.payload_data.config_message.switch_config_message.payload_on = HAONOFT_ON;
+    data.payload_data.config_message.switch_config_message.payload_off = HAONOFT_OFF;
+    data.payload_data.config_message.switch_config_message.enabled_by_default = true;
+    data.payload_data.config_message.switch_config_message.optimistic = false;
+    data.payload_data.config_message.switch_config_message.qos = 2;
+    data.payload_data.config_message.switch_config_message.retain = true;
     zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
 }
 
 void zh_send_switch_hardware_config_message(const switch_config_t *switch_config)
 {
-    zh_config_message_t config_message = {0};
-    config_message = (zh_config_message_t)switch_config->hardware_config;
     zh_espnow_data_t data = {0};
     data.device_type = ZHDT_SWITCH;
     data.payload_type = ZHPT_HARDWARE;
-    data.payload_data = (zh_payload_data_t)config_message;
+    data.payload_data.config_message.switch_hardware_config_message.relay_pin = switch_config->hardware_config.relay_pin;
+    data.payload_data.config_message.switch_hardware_config_message.relay_on_level = switch_config->hardware_config.relay_on_level;
+    data.payload_data.config_message.switch_hardware_config_message.led_pin = switch_config->hardware_config.led_pin;
+    data.payload_data.config_message.switch_hardware_config_message.led_on_level = switch_config->hardware_config.led_on_level;
+    data.payload_data.config_message.switch_hardware_config_message.int_button_pin = switch_config->hardware_config.int_button_pin;
+    data.payload_data.config_message.switch_hardware_config_message.int_button_on_level = switch_config->hardware_config.int_button_on_level;
+    data.payload_data.config_message.switch_hardware_config_message.ext_button_pin = switch_config->hardware_config.ext_button_pin;
+    data.payload_data.config_message.switch_hardware_config_message.ext_button_on_level = switch_config->hardware_config.ext_button_on_level;
+    data.payload_data.config_message.switch_hardware_config_message.sensor_pin = switch_config->hardware_config.sensor_pin;
+    data.payload_data.config_message.switch_hardware_config_message.sensor_type = switch_config->hardware_config.sensor_type;
     zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
 }
 
 void zh_send_switch_keep_alive_message_task(void *pvParameter)
 {
     switch_config_t *switch_config = pvParameter;
-    zh_keep_alive_message_t keep_alive_message = {0};
-    keep_alive_message.online_status = ZH_ONLINE;
-    keep_alive_message.message_frequency = ZH_SWITCH_KEEP_ALIVE_MESSAGE_FREQUENCY;
     zh_espnow_data_t data = {0};
     data.device_type = ZHDT_SWITCH;
     data.payload_type = ZHPT_KEEP_ALIVE;
-    data.payload_data = (zh_payload_data_t)keep_alive_message;
+    data.payload_data.keep_alive_message.online_status = ZH_ONLINE;
+    data.payload_data.keep_alive_message.message_frequency = ZH_SWITCH_KEEP_ALIVE_MESSAGE_FREQUENCY;
     for (;;)
     {
         zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
@@ -385,12 +384,10 @@ void zh_send_switch_keep_alive_message_task(void *pvParameter)
 
 void zh_send_switch_status_message(const switch_config_t *switch_config)
 {
-    zh_status_message_t status_message = {0};
-    status_message = (zh_status_message_t)switch_config->status;
     zh_espnow_data_t data = {0};
     data.device_type = ZHDT_SWITCH;
     data.payload_type = ZHPT_STATE;
-    data.payload_data = (zh_payload_data_t)status_message;
+    data.payload_data.status_message.switch_status_message.status = switch_config->status.status;
     zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
 }
 
@@ -399,41 +396,33 @@ void zh_send_sensor_config_message(const switch_config_t *switch_config)
     zh_espnow_data_t data = {0};
     data.device_type = ZHDT_SENSOR;
     data.payload_type = ZHPT_CONFIG;
-    zh_config_message_t config_message = {0};
-    zh_sensor_config_message_t sensor_config_message = {0};
-    sensor_config_message.suggested_display_precision = 1;
-    sensor_config_message.expire_after = ZH_SENSOR_STATUS_MESSAGE_FREQUENCY * 3;
-    sensor_config_message.enabled_by_default = true;
-    sensor_config_message.force_update = true;
-    sensor_config_message.qos = 2;
-    sensor_config_message.retain = true;
-    char *unit_of_measurement;
+    data.payload_data.config_message.sensor_config_message.suggested_display_precision = 1;
+    data.payload_data.config_message.sensor_config_message.expire_after = ZH_SENSOR_STATUS_MESSAGE_FREQUENCY * 3;
+    data.payload_data.config_message.sensor_config_message.enabled_by_default = true;
+    data.payload_data.config_message.sensor_config_message.force_update = true;
+    data.payload_data.config_message.sensor_config_message.qos = 2;
+    data.payload_data.config_message.sensor_config_message.retain = true;
+    char *unit_of_measurement = NULL;
     switch (switch_config->hardware_config.sensor_type)
     {
     case HAST_DS18B20:;
-        sensor_config_message.unique_id = 2;
-        sensor_config_message.sensor_device_class = HASDC_TEMPERATURE;
+        data.payload_data.config_message.sensor_config_message.unique_id = 2;
+        data.payload_data.config_message.sensor_config_message.sensor_device_class = HASDC_TEMPERATURE;
         unit_of_measurement = "°C";
-        strcpy(sensor_config_message.unit_of_measurement, unit_of_measurement);
-        config_message = (zh_config_message_t)sensor_config_message;
-        data.payload_data = (zh_payload_data_t)config_message;
+        strcpy(data.payload_data.config_message.sensor_config_message.unit_of_measurement, unit_of_measurement);
         zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
         break;
     case HAST_DHT11:;
     case HAST_DHT22:;
-        sensor_config_message.unique_id = 2;
-        sensor_config_message.sensor_device_class = HASDC_TEMPERATURE;
+        data.payload_data.config_message.sensor_config_message.unique_id = 2;
+        data.payload_data.config_message.sensor_config_message.sensor_device_class = HASDC_TEMPERATURE;
         unit_of_measurement = "°C";
-        strcpy(sensor_config_message.unit_of_measurement, unit_of_measurement);
-        config_message = (zh_config_message_t)sensor_config_message;
-        data.payload_data = (zh_payload_data_t)config_message;
+        strcpy(data.payload_data.config_message.sensor_config_message.unit_of_measurement, unit_of_measurement);
         zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
-        sensor_config_message.unique_id = 3;
-        sensor_config_message.sensor_device_class = HASDC_HUMIDITY;
+        data.payload_data.config_message.sensor_config_message.unique_id = 3;
+        data.payload_data.config_message.sensor_config_message.sensor_device_class = HASDC_HUMIDITY;
         unit_of_measurement = "%";
-        strcpy(sensor_config_message.unit_of_measurement, unit_of_measurement);
-        config_message = (zh_config_message_t)sensor_config_message;
-        data.payload_data = (zh_payload_data_t)config_message;
+        strcpy(data.payload_data.config_message.sensor_config_message.unit_of_measurement, unit_of_measurement);
         zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
         break;
     default:
@@ -445,23 +434,21 @@ void zh_send_sensor_attributes_message_task(void *pvParameter)
 {
     switch_config_t *switch_config = pvParameter;
     const esp_app_desc_t *app_info = get_app_description();
-    zh_attributes_message_t attributes_message = {0};
-    attributes_message.chip_type = ZH_CHIP_TYPE;
-    attributes_message.sensor_type = switch_config->hardware_config.sensor_type;
-    strcpy(attributes_message.flash_size, CONFIG_ESPTOOLPY_FLASHSIZE);
-    attributes_message.cpu_frequency = ZH_CPU_FREQUENCY;
-    attributes_message.reset_reason = (uint8_t)esp_reset_reason();
-    strcpy(attributes_message.app_name, app_info->project_name);
-    strcpy(attributes_message.app_version, app_info->version);
     zh_espnow_data_t data = {0};
     data.device_type = ZHDT_SENSOR;
     data.payload_type = ZHPT_ATTRIBUTES;
+    data.payload_data.attributes_message.chip_type = ZH_CHIP_TYPE;
+    data.payload_data.attributes_message.sensor_type = switch_config->hardware_config.sensor_type;
+    strcpy(data.payload_data.attributes_message.flash_size, CONFIG_ESPTOOLPY_FLASHSIZE);
+    data.payload_data.attributes_message.cpu_frequency = ZH_CPU_FREQUENCY;
+    data.payload_data.attributes_message.reset_reason = (uint8_t)esp_reset_reason();
+    strcpy(data.payload_data.attributes_message.app_name, app_info->project_name);
+    strcpy(data.payload_data.attributes_message.app_version, app_info->version);
     for (;;)
     {
-        attributes_message.heap_size = esp_get_free_heap_size();
-        attributes_message.min_heap_size = esp_get_minimum_free_heap_size();
-        attributes_message.uptime = esp_timer_get_time() / 1000000;
-        data.payload_data = (zh_payload_data_t)attributes_message;
+        data.payload_data.attributes_message.heap_size = esp_get_free_heap_size();
+        data.payload_data.attributes_message.min_heap_size = esp_get_minimum_free_heap_size();
+        data.payload_data.attributes_message.uptime = esp_timer_get_time() / 1000000;
         zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
         vTaskDelay(ZH_SENSOR_ATTRIBUTES_MESSAGE_FREQUENCY * 1000 / portTICK_PERIOD_MS);
     }
@@ -473,12 +460,10 @@ void zh_send_sensor_status_message_task(void *pvParameter)
     switch_config_t *switch_config = pvParameter;
     float humidity = 0.0;
     float temperature = 0.0;
-    zh_sensor_status_message_t sensor_status_message = {0};
-    sensor_status_message.sensor_type = switch_config->hardware_config.sensor_type;
-    zh_status_message_t status_message = {0};
     zh_espnow_data_t data = {0};
     data.device_type = ZHDT_SENSOR;
     data.payload_type = ZHPT_STATE;
+    data.payload_data.status_message.sensor_status_message.sensor_type = switch_config->hardware_config.sensor_type;
     for (;;)
     {
         switch (switch_config->hardware_config.sensor_type)
@@ -488,7 +473,7 @@ void zh_send_sensor_status_message_task(void *pvParameter)
             switch (zh_ds18b20_read(NULL, &temperature))
             {
             case ESP_OK:
-                sensor_status_message.temperature = temperature;
+                data.payload_data.status_message.sensor_status_message.temperature = temperature;
                 break;
             case ESP_FAIL:
                 vTaskDelay(10000 / portTICK_PERIOD_MS);
@@ -508,8 +493,8 @@ void zh_send_sensor_status_message_task(void *pvParameter)
             switch (zh_dht_read(&switch_config->dht_handle, &humidity, &temperature))
             {
             case ESP_OK:
-                sensor_status_message.humidity = humidity;
-                sensor_status_message.temperature = temperature;
+                data.payload_data.status_message.sensor_status_message.humidity = humidity;
+                data.payload_data.status_message.sensor_status_message.temperature = temperature;
                 break;
             case ESP_ERR_INVALID_RESPONSE:
                 vTaskDelay(10000 / portTICK_PERIOD_MS);
@@ -530,8 +515,6 @@ void zh_send_sensor_status_message_task(void *pvParameter)
         default:
             break;
         }
-        status_message = (zh_status_message_t)sensor_status_message;
-        data.payload_data = (zh_payload_data_t)status_message;
         zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
         vTaskDelay(ZH_SENSOR_STATUS_MESSAGE_FREQUENCY * 1000 / portTICK_PERIOD_MS);
     }
@@ -541,7 +524,6 @@ void zh_send_sensor_status_message_task(void *pvParameter)
 void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     switch_config_t *switch_config = arg;
-    zh_espnow_data_t data = {0};
     switch (event_id)
     {
 #ifdef CONFIG_NETWORK_TYPE_DIRECT
@@ -559,19 +541,19 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
             goto ZH_NETWORK_EVENT_HANDLER_EXIT;
         }
 #endif
-        memcpy(&data, recv_data->data, recv_data->data_len);
-        switch (data.device_type)
+        zh_espnow_data_t *data = (zh_espnow_data_t *)recv_data->data;
+        switch (data->device_type)
         {
         case ZHDT_GATEWAY:
-            switch (data.payload_type)
+            switch (data->payload_type)
             {
             case ZHPT_KEEP_ALIVE:
-                if (data.payload_data.keep_alive_message.online_status == ZH_ONLINE)
+                if (data->payload_data.keep_alive_message.online_status == ZH_ONLINE)
                 {
                     if (switch_config->gateway_is_available == false)
                     {
                         switch_config->gateway_is_available = true;
-                        memcpy(&switch_config->gateway_mac, &recv_data->mac_addr, 6);
+                        memcpy(switch_config->gateway_mac, recv_data->mac_addr, 6);
                         zh_send_switch_hardware_config_message(switch_config);
                         if (switch_config->hardware_config.relay_pin != ZH_NOT_USED)
                         {
@@ -607,35 +589,41 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
                 }
                 break;
             case ZHPT_SET:
-                switch_config->status = data.payload_data.status_message.switch_status_message;
+                switch_config->status.status = data->payload_data.status_message.switch_status_message.status;
                 zh_gpio_set_level(switch_config);
                 zh_save_status(switch_config);
                 zh_send_switch_status_message(switch_config);
                 break;
             case ZHPT_HARDWARE:
-                switch_config->hardware_config = data.payload_data.config_message.switch_hardware_config_message;
+                switch_config->hardware_config.relay_pin = data->payload_data.config_message.switch_hardware_config_message.relay_pin;
+                switch_config->hardware_config.relay_on_level = data->payload_data.config_message.switch_hardware_config_message.relay_on_level;
+                switch_config->hardware_config.led_pin = data->payload_data.config_message.switch_hardware_config_message.led_pin;
+                switch_config->hardware_config.led_on_level = data->payload_data.config_message.switch_hardware_config_message.led_on_level;
+                switch_config->hardware_config.int_button_pin = data->payload_data.config_message.switch_hardware_config_message.int_button_pin;
+                switch_config->hardware_config.int_button_on_level = data->payload_data.config_message.switch_hardware_config_message.int_button_on_level;
+                switch_config->hardware_config.ext_button_pin = data->payload_data.config_message.switch_hardware_config_message.ext_button_pin;
+                switch_config->hardware_config.ext_button_on_level = data->payload_data.config_message.switch_hardware_config_message.ext_button_on_level;
+                switch_config->hardware_config.sensor_pin = data->payload_data.config_message.switch_hardware_config_message.sensor_pin;
+                switch_config->hardware_config.sensor_type = data->payload_data.config_message.switch_hardware_config_message.sensor_type;
                 zh_save_config(switch_config);
                 esp_restart();
                 break;
             case ZHPT_UPDATE:;
                 const esp_app_desc_t *app_info = get_app_description();
                 switch_config->update_partition = esp_ota_get_next_update_partition(NULL);
-                zh_espnow_ota_message_t espnow_ota_message = {0};
-                espnow_ota_message.chip_type = ZH_CHIP_TYPE;
-                strcpy(espnow_ota_message.app_version, app_info->version);
+                strcpy(data->payload_data.ota_message.espnow_ota_data.app_version, app_info->version);
 #ifdef CONFIG_IDF_TARGET_ESP8266
                 char *app_name = (char *)heap_caps_malloc(strlen(app_info->project_name) + 6, MALLOC_CAP_8BIT);
                 memset(app_name, 0, strlen(app_info->project_name) + 6);
                 sprintf(app_name, "%s.app%d", app_info->project_name, switch_config->update_partition->subtype - ESP_PARTITION_SUBTYPE_APP_OTA_0 + 1);
-                strcpy(espnow_ota_message.app_name, app_name);
+                strcpy(data->payload_data.ota_message.espnow_ota_data.app_name, app_name);
                 heap_caps_free(app_name);
 #else
-                strcpy(espnow_ota_message.app_name, app_info->project_name);
+                strcpy(data->payload_data.ota_message.espnow_ota_data.app_name, app_info->project_name);
 #endif
-                data.device_type = ZHDT_SWITCH;
-                data.payload_type = ZHPT_UPDATE;
-                data.payload_data = (zh_payload_data_t)espnow_ota_message;
-                zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+                data->device_type = ZHDT_SWITCH;
+                data->payload_type = ZHPT_UPDATE;
+                zh_send_message(switch_config->gateway_mac, (uint8_t *)data, sizeof(zh_espnow_data_t));
                 break;
             case ZHPT_UPDATE_BEGIN:
 #ifdef CONFIG_IDF_TARGET_ESP8266
@@ -644,19 +632,19 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
                 esp_ota_begin(switch_config->update_partition, OTA_SIZE_UNKNOWN, (esp_ota_handle_t *)&switch_config->update_handle);
 #endif
                 switch_config->ota_message_part_number = 1;
-                data.device_type = ZHDT_SWITCH;
-                data.payload_type = ZHPT_UPDATE_PROGRESS;
-                zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+                data->device_type = ZHDT_SWITCH;
+                data->payload_type = ZHPT_UPDATE_PROGRESS;
+                zh_send_message(switch_config->gateway_mac, (uint8_t *)data, sizeof(zh_espnow_data_t));
                 break;
             case ZHPT_UPDATE_PROGRESS:
-                if (switch_config->ota_message_part_number == data.payload_data.espnow_ota_message.part)
+                if (switch_config->ota_message_part_number == data->payload_data.ota_message.espnow_ota_message.part)
                 {
                     ++switch_config->ota_message_part_number;
-                    esp_ota_write(switch_config->update_handle, (const void *)data.payload_data.espnow_ota_message.data, data.payload_data.espnow_ota_message.data_len);
+                    esp_ota_write(switch_config->update_handle, (const void *)data->payload_data.ota_message.espnow_ota_message.data, data->payload_data.ota_message.espnow_ota_message.data_len);
                 }
-                data.device_type = ZHDT_SWITCH;
-                data.payload_type = ZHPT_UPDATE_PROGRESS;
-                zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+                data->device_type = ZHDT_SWITCH;
+                data->payload_type = ZHPT_UPDATE_PROGRESS;
+                zh_send_message(switch_config->gateway_mac, (uint8_t *)data, sizeof(zh_espnow_data_t));
                 break;
             case ZHPT_UPDATE_ERROR:
                 esp_ota_end(switch_config->update_handle);
@@ -664,15 +652,15 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
             case ZHPT_UPDATE_END:
                 if (esp_ota_end(switch_config->update_handle) != ESP_OK)
                 {
-                    data.device_type = ZHDT_SWITCH;
-                    data.payload_type = ZHPT_UPDATE_FAIL;
-                    zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+                    data->device_type = ZHDT_SWITCH;
+                    data->payload_type = ZHPT_UPDATE_FAIL;
+                    zh_send_message(switch_config->gateway_mac, (uint8_t *)data, sizeof(zh_espnow_data_t));
                     break;
                 }
                 esp_ota_set_boot_partition(switch_config->update_partition);
-                data.device_type = ZHDT_SWITCH;
-                data.payload_type = ZHPT_UPDATE_SUCCESS;
-                zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+                data->device_type = ZHDT_SWITCH;
+                data->payload_type = ZHPT_UPDATE_SUCCESS;
+                zh_send_message(switch_config->gateway_mac, (uint8_t *)data, sizeof(zh_espnow_data_t));
                 vTaskDelay(1000 / portTICK_PERIOD_MS);
                 esp_restart();
                 break;
