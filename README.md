@@ -35,7 +35,7 @@ MQTT configuration message should filled according to the template "X1,X2,X3,X4,
 7. X7 - External button GPIO number. 0 - 48 (according to the module used), 255 if not used.
 8. X8 - External button trigger level. 1 for high, 0 for low. Only affected when X7 is used.
 9. X9 - Sensor GPIO number. 0 - 48 (according to the module used). 255 if not used.
-10. X10 - Sensor type. 1 for DS18B20, 2 for DHT11, 3 for DHT22. Only affected when X9 is used.
+10. X10 - Sensor type. 1 for DS18B20, 8 for DHT. Only affected when X9 is used.
 
 ## Build and flash
 
