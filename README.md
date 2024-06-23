@@ -12,7 +12,7 @@ ESP-NOW based switch for ESP32 ESP-IDF and ESP8266 RTOS SDK. Alternate firmware 
 1. Saves the last state when the power is turned off.
 2. Automatically adds switch configuration to Home Assistan via MQTT discovery as a switch.
 3. Update firmware from HTTPS server via ESP-NOW.
-4. Optional support one external sensor (DS18B20, DHT11, DHT22).
+4. Optional support one external 1-wire sensor (DS18B20/DHT11/DHT22/AM2302/AM2320).
 5. Direct or mesh work mode.
 
 ## Notes
