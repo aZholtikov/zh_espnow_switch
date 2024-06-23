@@ -151,10 +151,8 @@ menu "ZH ESP-NOW Switch Configuration"
 		default SENSOR_TYPE_DS18B20
 		config SENSOR_TYPE_DS18B20
 			bool "DS18B20"
-		config SENSOR_TYPE_DHT11
-			bool "DHT11"
-		config SENSOR_TYPE_DHT22
-			bool "DHT22"
+		config SENSOR_TYPE_DHT
+			bool "DHT"
 	endchoice
 
 endmenu 

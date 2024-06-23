@@ -78,7 +78,6 @@ typedef struct // Structure of data exchange between tasks, functions and event 
     volatile bool gpio_processing;               // GPIO processing flag. @note Used to prevent a repeated interrupt from triggering during GPIO processing.
     volatile bool gateway_is_available;          // Gateway availability status flag. @note Used to control the tasks when the gateway connection is established / lost.
     uint8_t gateway_mac[6];                      // Gateway MAC address.
-    zh_dht_handle_t dht_handle;                  // Unique DTH11/22 sensor handle.
     TaskHandle_t switch_attributes_message_task; // Unique task handle for zh_send_switsh_attributes_message_task().
     TaskHandle_t switch_keep_alive_message_task; // Unique task handle for zh_send_switch_keep_alive_message_task().
     TaskHandle_t sensor_attributes_message_task; // Unique task handle for zh_send_sensor_attributes_message_task().

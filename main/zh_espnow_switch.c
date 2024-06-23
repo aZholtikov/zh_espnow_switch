@@ -91,12 +91,9 @@ void zh_load_config(switch_config_t *switch_config)
 #ifdef CONFIG_SENSOR_TYPE_DS18B20
         switch_config->hardware_config.sensor_pin = CONFIG_SENSOR_PIN;
         switch_config->hardware_config.sensor_type = HAST_DS18B20;
-#elif CONFIG_SENSOR_TYPE_DHT11
+#elif CONFIG_SENSOR_TYPE_DHT
         switch_config->hardware_config.sensor_pin = CONFIG_SENSOR_PIN;
-        switch_config->hardware_config.sensor_type = HAST_DHT11;
-#elif CONFIG_SENSOR_TYPE_DHT22
-        switch_config->hardware_config.sensor_pin = CONFIG_SENSOR_PIN;
-        switch_config->hardware_config.sensor_type = HAST_DHT22;
+        switch_config->hardware_config.sensor_type = HAST_DHT;
 #else
         switch_config->hardware_config.sensor_pin = ZH_NOT_USED;
         switch_config->hardware_config.sensor_type = HAST_NONE;
@@ -238,11 +235,13 @@ void zh_gpio_init(switch_config_t *switch_config)
                     switch_config->hardware_config.sensor_pin = ZH_NOT_USED;
                 }
                 break;
-            case HAST_DHT11:;
-            case HAST_DHT22:;
-                zh_dht_sensor_type_t sensor_type = (switch_config->hardware_config.sensor_type == HAST_DHT11) ? ZH_DHT11 : ZH_DHT22;
-                switch_config->dht_handle = zh_dht_init(sensor_type, switch_config->hardware_config.sensor_pin);
-                switch_config->hardware_config.sensor_pin = switch_config->dht_handle.sensor_pin;
+            case HAST_DHT:;
+                zh_dht_init_config_t dht_init_config = ZH_DHT_INIT_CONFIG_DEFAULT();
+                dht_init_config.sensor_pin = switch_config->hardware_config.sensor_pin;
+                if (zh_dht_init(&dht_init_config) != ESP_OK)
+                {
+                    switch_config->hardware_config.sensor_pin = ZH_NOT_USED;
+                }
                 break;
             default:
                 switch_config->hardware_config.sensor_type = HAST_NONE;
@@ -405,15 +404,14 @@ void zh_send_sensor_config_message(const switch_config_t *switch_config)
     char *unit_of_measurement = NULL;
     switch (switch_config->hardware_config.sensor_type)
     {
-    case HAST_DS18B20:;
+    case HAST_DS18B20:
         data.payload_data.config_message.sensor_config_message.unique_id = 2;
         data.payload_data.config_message.sensor_config_message.sensor_device_class = HASDC_TEMPERATURE;
         unit_of_measurement = "°C";
         strcpy(data.payload_data.config_message.sensor_config_message.unit_of_measurement, unit_of_measurement);
         zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
         break;
-    case HAST_DHT11:;
-    case HAST_DHT22:;
+    case HAST_DHT:
         data.payload_data.config_message.sensor_config_message.unique_id = 2;
         data.payload_data.config_message.sensor_config_message.sensor_device_class = HASDC_TEMPERATURE;
         unit_of_measurement = "°C";
@@ -487,10 +485,9 @@ void zh_send_sensor_status_message_task(void *pvParameter)
                 break;
             }
             break;
-        case HAST_DHT11:
-        case HAST_DHT22:
+        case HAST_DHT:
         ZH_DHT_READ:
-            switch (zh_dht_read(&switch_config->dht_handle, &humidity, &temperature))
+            switch (zh_dht_read(&humidity, &temperature))
             {
             case ESP_OK:
                 data.payload_data.status_message.sensor_status_message.humidity = humidity;
