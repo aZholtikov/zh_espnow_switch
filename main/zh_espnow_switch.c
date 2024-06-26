@@ -402,22 +402,29 @@ void zh_send_sensor_config_message(const switch_config_t *switch_config)
     data.payload_data.config_message.sensor_config_message.qos = 2;
     data.payload_data.config_message.sensor_config_message.retain = true;
     char *unit_of_measurement = NULL;
+    // For compatibility with zh_espnow_sensor.
+    data.payload_data.config_message.sensor_config_message.unique_id = 2;
+    data.payload_data.config_message.sensor_config_message.sensor_device_class = HASDC_VOLTAGE;
+    unit_of_measurement = "V";
+    strcpy(data.payload_data.config_message.sensor_config_message.unit_of_measurement, unit_of_measurement);
+    zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+    // For compatibility with zh_espnow_sensor.
     switch (switch_config->hardware_config.sensor_type)
     {
     case HAST_DS18B20:
-        data.payload_data.config_message.sensor_config_message.unique_id = 2;
+        data.payload_data.config_message.sensor_config_message.unique_id = 3;
         data.payload_data.config_message.sensor_config_message.sensor_device_class = HASDC_TEMPERATURE;
         unit_of_measurement = "°C";
         strcpy(data.payload_data.config_message.sensor_config_message.unit_of_measurement, unit_of_measurement);
         zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
         break;
     case HAST_DHT:
-        data.payload_data.config_message.sensor_config_message.unique_id = 2;
+        data.payload_data.config_message.sensor_config_message.unique_id = 3;
         data.payload_data.config_message.sensor_config_message.sensor_device_class = HASDC_TEMPERATURE;
         unit_of_measurement = "°C";
         strcpy(data.payload_data.config_message.sensor_config_message.unit_of_measurement, unit_of_measurement);
         zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
-        data.payload_data.config_message.sensor_config_message.unique_id = 3;
+        data.payload_data.config_message.sensor_config_message.unique_id = 4;
         data.payload_data.config_message.sensor_config_message.sensor_device_class = HASDC_HUMIDITY;
         unit_of_measurement = "%";
         strcpy(data.payload_data.config_message.sensor_config_message.unit_of_measurement, unit_of_measurement);
@@ -472,6 +479,7 @@ void zh_send_sensor_status_message_task(void *pvParameter)
             {
             case ESP_OK:
                 data.payload_data.status_message.sensor_status_message.temperature = temperature;
+                data.payload_data.status_message.sensor_status_message.voltage = 3.3; // For compatibility with zh_espnow_sensor.
                 break;
             case ESP_FAIL:
                 vTaskDelay(10000 / portTICK_PERIOD_MS);
@@ -492,6 +500,7 @@ void zh_send_sensor_status_message_task(void *pvParameter)
             case ESP_OK:
                 data.payload_data.status_message.sensor_status_message.humidity = humidity;
                 data.payload_data.status_message.sensor_status_message.temperature = temperature;
+                data.payload_data.status_message.sensor_status_message.voltage = 3.3; // For compatibility with zh_espnow_sensor.
                 break;
             case ESP_ERR_INVALID_RESPONSE:
                 vTaskDelay(10000 / portTICK_PERIOD_MS);
