@@ -471,57 +471,39 @@ void zh_send_sensor_status_message_task(void *pvParameter)
     data.payload_data.status_message.sensor_status_message.sensor_type = switch_config->hardware_config.sensor_type;
     for (;;)
     {
+        esp_err_t err = ESP_OK;
         switch (switch_config->hardware_config.sensor_type)
         {
         case HAST_DS18B20:
-        ZH_DS18B20_READ:
-            switch (zh_ds18b20_read(NULL, &temperature))
+            err = zh_ds18b20_read(NULL, &temperature);
+            if (err == ESP_OK)
             {
-            case ESP_OK:
                 data.payload_data.status_message.sensor_status_message.temperature = temperature;
-                data.payload_data.status_message.sensor_status_message.voltage = 3.3; // For compatibility with zh_espnow_sensor.
-                break;
-            case ESP_FAIL:
-                vTaskDelay(10000 / portTICK_PERIOD_MS);
-                goto ZH_DS18B20_READ;
-                break;
-            case ESP_ERR_INVALID_CRC:
-                vTaskDelay(1000 / portTICK_PERIOD_MS);
-                goto ZH_DS18B20_READ;
-                break;
-            default:
-                break;
+                data.payload_data.status_message.sensor_status_message.voltage = 3.3; // For future development.
             }
             break;
         case HAST_DHT:
-        ZH_DHT_READ:
-            switch (zh_dht_read(&humidity, &temperature))
+            err = zh_dht_read(&humidity, &temperature);
+            if (err == ESP_OK)
             {
-            case ESP_OK:
                 data.payload_data.status_message.sensor_status_message.humidity = humidity;
                 data.payload_data.status_message.sensor_status_message.temperature = temperature;
-                data.payload_data.status_message.sensor_status_message.voltage = 3.3; // For compatibility with zh_espnow_sensor.
-                break;
-            case ESP_ERR_INVALID_RESPONSE:
-                vTaskDelay(10000 / portTICK_PERIOD_MS);
-                goto ZH_DHT_READ;
-                break;
-            case ESP_ERR_TIMEOUT:
-                vTaskDelay(10000 / portTICK_PERIOD_MS);
-                goto ZH_DHT_READ;
-                break;
-            case ESP_ERR_INVALID_CRC:
-                vTaskDelay(3000 / portTICK_PERIOD_MS);
-                goto ZH_DHT_READ;
-                break;
-            default:
-                break;
+                data.payload_data.status_message.sensor_status_message.voltage = 3.3; // For future development.
             }
             break;
         default:
             break;
         }
-        zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+        if (err == ESP_OK)
+        {
+            zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+        }
+        else
+        {
+            data.payload_type = ZHPT_ERROR;
+            strcpy(data.payload_data.status_message.error_message.message, "Sensor reading error.");
+            zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+        }
         vTaskDelay(ZH_SENSOR_STATUS_MESSAGE_FREQUENCY * 1000 / portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);

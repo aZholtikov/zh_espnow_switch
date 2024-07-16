@@ -159,14 +159,14 @@ void zh_send_switch_attributes_message_task(void *pvParameter);
 void zh_send_switch_config_message(const switch_config_t *switch_config);
 
 /**
- * @brief Function for prepare the sensor hardware configuration message and sending it to the gateway.
+ * @brief Function for prepare the switch hardware configuration message and sending it to the gateway.
  *
  * @param[in] switch_config Pointer to the structure of data exchange between tasks, functions and event handlers.
  */
 void zh_send_switch_hardware_config_message(const switch_config_t *switch_config);
 
 /**
- * @brief Task for prepare the sensor keep alive message and sending it to the gateway.
+ * @brief Task for prepare the switch keep alive message and sending it to the gateway.
  *
  * @param[in] pvParameter Pointer to the structure of data exchange between tasks, functions and event handlers.
  */
