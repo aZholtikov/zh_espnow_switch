@@ -15,7 +15,11 @@ void app_main(void)
     wifi_init_config_t wifi_init_config = WIFI_INIT_CONFIG_DEFAULT();
     esp_wifi_init(&wifi_init_config);
     esp_wifi_set_mode(WIFI_MODE_STA);
-    esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B);
+#ifdef CONFIG_IDF_TARGET_ESP8266
+    esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N);
+#else
+    esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N | WIFI_PROTOCOL_LR);
+#endif
     esp_wifi_start();
 #ifdef CONFIG_NETWORK_TYPE_DIRECT
     zh_espnow_init_config_t espnow_init_config = ZH_ESPNOW_INIT_CONFIG_DEFAULT();
@@ -396,7 +400,7 @@ void zh_send_sensor_config_message(const switch_config_t *switch_config)
     data.device_type = ZHDT_SENSOR;
     data.payload_type = ZHPT_CONFIG;
     data.payload_data.config_message.sensor_config_message.suggested_display_precision = 1;
-    data.payload_data.config_message.sensor_config_message.expire_after = ZH_SENSOR_STATUS_MESSAGE_FREQUENCY * 3;
+    data.payload_data.config_message.sensor_config_message.expire_after = ZH_SENSOR_STATUS_MESSAGE_FREQUENCY * 1.25; // + 25% just in case.
     data.payload_data.config_message.sensor_config_message.enabled_by_default = true;
     data.payload_data.config_message.sensor_config_message.force_update = true;
     data.payload_data.config_message.sensor_config_message.qos = 2;
@@ -467,8 +471,6 @@ void zh_send_sensor_status_message_task(void *pvParameter)
     float temperature = 0.0;
     zh_espnow_data_t data = {0};
     data.device_type = ZHDT_SENSOR;
-    data.payload_type = ZHPT_STATE;
-    data.payload_data.status_message.sensor_status_message.sensor_type = switch_config->hardware_config.sensor_type;
     for (;;)
     {
         esp_err_t err = ESP_OK;
@@ -496,13 +498,19 @@ void zh_send_sensor_status_message_task(void *pvParameter)
         }
         if (err == ESP_OK)
         {
+            data.payload_type = ZHPT_STATE;
+            data.payload_data.status_message.sensor_status_message.sensor_type = switch_config->hardware_config.sensor_type;
             zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
         }
         else
         {
             data.payload_type = ZHPT_ERROR;
-            strcpy(data.payload_data.status_message.error_message.message, "Sensor reading error.");
+            char *message = (char *)heap_caps_malloc(150, MALLOC_CAP_8BIT);
+            memset(message, 0, 150);
+            sprintf(message, "Sensor %s reading error. Error - %s.", zh_get_sensor_type_value_name(switch_config->hardware_config.sensor_type), esp_err_to_name(err));
+            strcpy(data.payload_data.status_message.error_message.message, message);
             zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+            heap_caps_free(message);
         }
         vTaskDelay(ZH_SENSOR_STATUS_MESSAGE_FREQUENCY * 1000 / portTICK_PERIOD_MS);
     }
@@ -547,13 +555,30 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
                         {
                             zh_send_switch_config_message(switch_config);
                             zh_send_switch_status_message(switch_config);
-                            xTaskCreatePinnedToCore(&zh_send_switch_attributes_message_task, "NULL", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, (TaskHandle_t *)&switch_config->switch_attributes_message_task, tskNO_AFFINITY);
-                            xTaskCreatePinnedToCore(&zh_send_switch_keep_alive_message_task, "NULL", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, (TaskHandle_t *)&switch_config->switch_keep_alive_message_task, tskNO_AFFINITY);
                             if (switch_config->hardware_config.sensor_pin != ZH_NOT_USED && switch_config->hardware_config.sensor_type != HAST_NONE)
                             {
                                 zh_send_sensor_config_message(switch_config);
-                                xTaskCreatePinnedToCore(&zh_send_sensor_status_message_task, "NULL", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, (TaskHandle_t *)&switch_config->sensor_status_message_task, tskNO_AFFINITY);
-                                xTaskCreatePinnedToCore(&zh_send_sensor_attributes_message_task, "NULL", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, (TaskHandle_t *)&switch_config->sensor_attributes_message_task, tskNO_AFFINITY);
+                            }
+                            if (switch_config->is_first_connection == false)
+                            {
+                                xTaskCreatePinnedToCore(&zh_send_switch_attributes_message_task, "NULL", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, (TaskHandle_t *)&switch_config->switch_attributes_message_task, tskNO_AFFINITY);
+                                xTaskCreatePinnedToCore(&zh_send_switch_keep_alive_message_task, "NULL", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, (TaskHandle_t *)&switch_config->switch_keep_alive_message_task, tskNO_AFFINITY);
+                                if (switch_config->hardware_config.sensor_pin != ZH_NOT_USED && switch_config->hardware_config.sensor_type != HAST_NONE)
+                                {
+                                    xTaskCreatePinnedToCore(&zh_send_sensor_status_message_task, "NULL", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, (TaskHandle_t *)&switch_config->sensor_status_message_task, tskNO_AFFINITY);
+                                    xTaskCreatePinnedToCore(&zh_send_sensor_attributes_message_task, "NULL", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, (TaskHandle_t *)&switch_config->sensor_attributes_message_task, tskNO_AFFINITY);
+                                }
+                                switch_config->is_first_connection = true;
+                            }
+                            else
+                            {
+                                vTaskResume(switch_config->switch_attributes_message_task);
+                                vTaskResume(switch_config->switch_keep_alive_message_task);
+                                if (switch_config->hardware_config.sensor_pin != ZH_NOT_USED && switch_config->hardware_config.sensor_type != HAST_NONE)
+                                {
+                                    vTaskResume(switch_config->sensor_status_message_task);
+                                    vTaskResume(switch_config->sensor_attributes_message_task);
+                                }
                             }
                         }
                     }
@@ -565,12 +590,12 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
                         switch_config->gateway_is_available = false;
                         if (switch_config->hardware_config.relay_pin != ZH_NOT_USED)
                         {
-                            vTaskDelete(switch_config->switch_attributes_message_task);
-                            vTaskDelete(switch_config->switch_keep_alive_message_task);
+                            vTaskSuspend(switch_config->switch_attributes_message_task);
+                            vTaskSuspend(switch_config->switch_keep_alive_message_task);
                             if (switch_config->hardware_config.sensor_pin != ZH_NOT_USED && switch_config->hardware_config.sensor_type != HAST_NONE)
                             {
-                                vTaskDelete(switch_config->sensor_attributes_message_task);
-                                vTaskDelete(switch_config->sensor_status_message_task);
+                                vTaskSuspend(switch_config->sensor_attributes_message_task);
+                                vTaskSuspend(switch_config->sensor_status_message_task);
                             }
                         }
                     }
@@ -594,9 +619,41 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
                 switch_config->hardware_config.sensor_pin = data->payload_data.config_message.switch_hardware_config_message.sensor_pin;
                 switch_config->hardware_config.sensor_type = data->payload_data.config_message.switch_hardware_config_message.sensor_type;
                 zh_save_config(switch_config);
+                switch_config->gateway_is_available = false;
+                if (switch_config->hardware_config.relay_pin != ZH_NOT_USED)
+                {
+                    vTaskDelete(switch_config->switch_attributes_message_task);
+                    vTaskDelete(switch_config->switch_keep_alive_message_task);
+                    if (switch_config->hardware_config.sensor_pin != ZH_NOT_USED && switch_config->hardware_config.sensor_type != HAST_NONE)
+                    {
+                        vTaskDelete(switch_config->sensor_attributes_message_task);
+                        vTaskDelete(switch_config->sensor_status_message_task);
+                    }
+                }
+                data->device_type = ZHDT_SWITCH;
+                data->payload_type = ZHPT_KEEP_ALIVE;
+                data->payload_data.keep_alive_message.online_status = ZH_OFFLINE;
+                data->payload_data.keep_alive_message.message_frequency = ZH_SWITCH_KEEP_ALIVE_MESSAGE_FREQUENCY;
+                zh_send_message(switch_config->gateway_mac, (uint8_t *)data, sizeof(zh_espnow_data_t));
+                vTaskDelay(1000 / portTICK_PERIOD_MS);
                 esp_restart();
                 break;
             case ZHPT_UPDATE:;
+                if (switch_config->hardware_config.relay_pin != ZH_NOT_USED)
+                {
+                    vTaskSuspend(switch_config->switch_attributes_message_task);
+                    vTaskSuspend(switch_config->switch_keep_alive_message_task);
+                    if (switch_config->hardware_config.sensor_pin != ZH_NOT_USED && switch_config->hardware_config.sensor_type != HAST_NONE)
+                    {
+                        vTaskSuspend(switch_config->sensor_attributes_message_task);
+                        vTaskSuspend(switch_config->sensor_status_message_task);
+                    }
+                }
+                data->device_type = ZHDT_SWITCH;
+                data->payload_type = ZHPT_KEEP_ALIVE;
+                data->payload_data.keep_alive_message.online_status = ZH_OFFLINE;
+                data->payload_data.keep_alive_message.message_frequency = ZH_SWITCH_KEEP_ALIVE_MESSAGE_FREQUENCY;
+                zh_send_message(switch_config->gateway_mac, (uint8_t *)data, sizeof(zh_espnow_data_t));
                 const esp_app_desc_t *app_info = get_app_description();
                 switch_config->update_partition = esp_ota_get_next_update_partition(NULL);
                 strcpy(data->payload_data.ota_message.espnow_ota_data.app_version, app_info->version);
@@ -609,7 +666,6 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
 #else
                 strcpy(data->payload_data.ota_message.espnow_ota_data.app_name, app_info->project_name);
 #endif
-                data->device_type = ZHDT_SWITCH;
                 data->payload_type = ZHPT_UPDATE;
                 zh_send_message(switch_config->gateway_mac, (uint8_t *)data, sizeof(zh_espnow_data_t));
                 break;
@@ -636,6 +692,16 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
                 break;
             case ZHPT_UPDATE_ERROR:
                 esp_ota_end(switch_config->update_handle);
+                if (switch_config->hardware_config.relay_pin != ZH_NOT_USED)
+                {
+                    vTaskResume(switch_config->switch_attributes_message_task);
+                    vTaskResume(switch_config->switch_keep_alive_message_task);
+                    if (switch_config->hardware_config.sensor_pin != ZH_NOT_USED && switch_config->hardware_config.sensor_type != HAST_NONE)
+                    {
+                        vTaskResume(switch_config->sensor_attributes_message_task);
+                        vTaskResume(switch_config->sensor_status_message_task);
+                    }
+                }
                 break;
             case ZHPT_UPDATE_END:
                 if (esp_ota_end(switch_config->update_handle) != ESP_OK)
@@ -643,6 +709,16 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
                     data->device_type = ZHDT_SWITCH;
                     data->payload_type = ZHPT_UPDATE_FAIL;
                     zh_send_message(switch_config->gateway_mac, (uint8_t *)data, sizeof(zh_espnow_data_t));
+                    if (switch_config->hardware_config.relay_pin != ZH_NOT_USED)
+                    {
+                        vTaskResume(switch_config->switch_attributes_message_task);
+                        vTaskResume(switch_config->switch_keep_alive_message_task);
+                        if (switch_config->hardware_config.sensor_pin != ZH_NOT_USED && switch_config->hardware_config.sensor_type != HAST_NONE)
+                        {
+                            vTaskResume(switch_config->sensor_attributes_message_task);
+                            vTaskResume(switch_config->sensor_status_message_task);
+                        }
+                    }
                     break;
                 }
                 esp_ota_set_boot_partition(switch_config->update_partition);
@@ -653,6 +729,22 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
                 esp_restart();
                 break;
             case ZHPT_RESTART:
+                if (switch_config->hardware_config.relay_pin != ZH_NOT_USED)
+                {
+                    vTaskDelete(switch_config->switch_attributes_message_task);
+                    vTaskDelete(switch_config->switch_keep_alive_message_task);
+                    if (switch_config->hardware_config.sensor_pin != ZH_NOT_USED && switch_config->hardware_config.sensor_type != HAST_NONE)
+                    {
+                        vTaskDelete(switch_config->sensor_attributes_message_task);
+                        vTaskDelete(switch_config->sensor_status_message_task);
+                    }
+                }
+                data->device_type = ZHDT_SWITCH;
+                data->payload_type = ZHPT_KEEP_ALIVE;
+                data->payload_data.keep_alive_message.online_status = ZH_OFFLINE;
+                data->payload_data.keep_alive_message.message_frequency = ZH_SWITCH_KEEP_ALIVE_MESSAGE_FREQUENCY;
+                zh_send_message(switch_config->gateway_mac, (uint8_t *)data, sizeof(zh_espnow_data_t));
+                vTaskDelay(1000 / portTICK_PERIOD_MS);
                 esp_restart();
                 break;
             default:
@@ -673,12 +765,12 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
             switch_config->gateway_is_available = false;
             if (switch_config->hardware_config.relay_pin != ZH_NOT_USED)
             {
-                vTaskDelete(switch_config->switch_attributes_message_task);
-                vTaskDelete(switch_config->switch_keep_alive_message_task);
+                vTaskSuspend(switch_config->switch_attributes_message_task);
+                vTaskSuspend(switch_config->switch_keep_alive_message_task);
                 if (switch_config->hardware_config.sensor_pin != ZH_NOT_USED && switch_config->hardware_config.sensor_type != HAST_NONE)
                 {
-                    vTaskDelete(switch_config->sensor_attributes_message_task);
-                    vTaskDelete(switch_config->sensor_status_message_task);
+                    vTaskSuspend(switch_config->sensor_attributes_message_task);
+                    vTaskSuspend(switch_config->sensor_status_message_task);
                 }
             }
         }
@@ -694,12 +786,12 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
             switch_config->gateway_is_available = false;
             if (switch_config->hardware_config.relay_pin != ZH_NOT_USED)
             {
-                vTaskDelete(switch_config->switch_attributes_message_task);
-                vTaskDelete(switch_config->switch_keep_alive_message_task);
+                vTaskSuspend(switch_config->switch_attributes_message_task);
+                vTaskSuspend(switch_config->switch_keep_alive_message_task);
                 if (switch_config->hardware_config.sensor_pin != ZH_NOT_USED && switch_config->hardware_config.sensor_type != HAST_NONE)
                 {
-                    vTaskDelete(switch_config->sensor_attributes_message_task);
-                    vTaskDelete(switch_config->sensor_status_message_task);
+                    vTaskSuspend(switch_config->sensor_attributes_message_task);
+                    vTaskSuspend(switch_config->sensor_status_message_task);
                 }
             }
         }

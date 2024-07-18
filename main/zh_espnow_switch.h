@@ -48,7 +48,7 @@
 
 #define ZH_SWITCH_KEEP_ALIVE_MESSAGE_FREQUENCY 10 // Frequency of sending a switch keep alive message to the gateway (in seconds).
 #define ZH_SWITCH_ATTRIBUTES_MESSAGE_FREQUENCY 60 // Frequency of sending a switch attributes message to the gateway (in seconds).
-#define ZH_SENSOR_STATUS_MESSAGE_FREQUENCY 300    // // Frequency of sending a sensor status message to the gateway (in seconds).
+#define ZH_SENSOR_STATUS_MESSAGE_FREQUENCY 60     // Frequency of sending a sensor status message to the gateway (in seconds).
 #define ZH_SENSOR_ATTRIBUTES_MESSAGE_FREQUENCY 60 // Frequency of sending a sensor attributes message to the gateway (in seconds).
 
 #define ZH_GPIO_TASK_PRIORITY 3    // Prioritize the task of GPIO processing.
@@ -77,6 +77,7 @@ typedef struct // Structure of data exchange between tasks, functions and event 
     } status;
     volatile bool gpio_processing;               // GPIO processing flag. @note Used to prevent a repeated interrupt from triggering during GPIO processing.
     volatile bool gateway_is_available;          // Gateway availability status flag. @note Used to control the tasks when the gateway connection is established / lost.
+    volatile bool is_first_connection;           // First connection status flag. @note Used to control the tasks when the gateway connection is established / lost.
     uint8_t gateway_mac[6];                      // Gateway MAC address.
     TaskHandle_t switch_attributes_message_task; // Unique task handle for zh_send_switsh_attributes_message_task().
     TaskHandle_t switch_keep_alive_message_task; // Unique task handle for zh_send_switch_keep_alive_message_task().
