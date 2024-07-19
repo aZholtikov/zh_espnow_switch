@@ -155,4 +155,12 @@ menu "ZH ESP-NOW Switch Configuration"
 			bool "DHT"
 	endchoice
 
+	config MEASUREMENT_FREQUENCY
+		depends on SENSOR_USING
+		int "Sensor measurement frequency"
+		range 1 65536
+		default 300
+		help
+			Sensor measurement frequency.
+
 endmenu 

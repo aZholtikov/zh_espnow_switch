@@ -22,7 +22,7 @@ ESP-NOW based switch for ESP32 ESP-IDF and ESP8266 RTOS SDK. Alternate firmware 
 3. For initial settings use "menuconfig -> ZH ESP-NOW Switch Configuration". After first boot all settings will be stored in NVS memory for prevente change during OTA firmware update.
 4. To restart the switch, send the "restart" command to the root topic of the switch (example - "homeassistant/espnow_switch/24-62-AB-F9-1F-A8").
 5. To update the switch firmware, send the "update" command to the root topic of the switch (example - "homeassistant/espnow_switch/70-03-9F-44-BE-F7"). The update path should be like as "https://your_server/zh_espnow_switch_esp32.bin" (for ESP32) or "https://your_server/zh_espnow_switch_esp8266.app1.bin + https://your_server/zh_espnow_switch_esp8266.app2.bin" (for ESP8266). Average update time is up to some minutes. The online status of the update will be displayed in the root switch topic.
-6. To change initial settings of the switch (except work mode), send the X1,X2,X3,X4,X5,X6,X7,X8,X9,X10 command to the hardware topic of the switch (example - "homeassistant/espnow_switch/70-03-9F-44-BE-F7/hardware"). The configuration will only be accepted if it does not cause errors. The current configuration status is displayed in the configuration topic of the switch (example - "homeassistant/espnow_switch/70-03-9F-44-BE-F7/config").
+6. To change initial settings of the switch (except work mode), send the X1,X2,X3,X4,X5,X6,X7,X8,X9,X10,X11 command to the hardware topic of the switch (example - "homeassistant/espnow_switch/70-03-9F-44-BE-F7/hardware"). The configuration will only be accepted if it does not cause errors. The current configuration status is displayed in the configuration topic of the switch (example - "homeassistant/espnow_switch/70-03-9F-44-BE-F7/config").
 
 MQTT configuration message should filled according to the template "X1,X2,X3,X4,X5,X6,X7,X8,X9,X10". Where:
 
@@ -36,6 +36,7 @@ MQTT configuration message should filled according to the template "X1,X2,X3,X4,
 8. X8 - External button trigger level. 1 for high, 0 for low. Only affected when X7 is used.
 9. X9 - Sensor GPIO number. 0 - 48 (according to the module used). 255 if not used.
 10. X10 - Sensor type. 1 for DS18B20, 8 for DHT. Only affected when X9 is used.
+11. X11 - Sensor measurement frequency. 1 - 65536 seconds. Only affected when X9 is used.
 
 ## Build and flash
 

@@ -48,8 +48,8 @@
 
 #define ZH_SWITCH_KEEP_ALIVE_MESSAGE_FREQUENCY 10 // Frequency of sending a switch keep alive message to the gateway (in seconds).
 #define ZH_SWITCH_ATTRIBUTES_MESSAGE_FREQUENCY 60 // Frequency of sending a switch attributes message to the gateway (in seconds).
-#define ZH_SENSOR_STATUS_MESSAGE_FREQUENCY 60     // Frequency of sending a sensor status message to the gateway (in seconds).
 #define ZH_SENSOR_ATTRIBUTES_MESSAGE_FREQUENCY 60 // Frequency of sending a sensor attributes message to the gateway (in seconds).
+#define ZH_SENSOR_READ_MAXIMUM_RETRY 5            // Maximum number of read sensor attempts.
 
 #define ZH_GPIO_TASK_PRIORITY 3    // Prioritize the task of GPIO processing.
 #define ZH_GPIO_STACK_SIZE 2048    // The stack size of the task of GPIO processing.
@@ -60,16 +60,17 @@ typedef struct // Structure of data exchange between tasks, functions and event 
 {
     struct // Storage structure of switch hardware configuration data.
     {
-        uint8_t relay_pin;            // Relay GPIO number.
-        bool relay_on_level;          // Relay ON level. @note HIGH (true) / LOW (false).
-        uint8_t led_pin;              // Led GPIO number (if present).
-        bool led_on_level;            // Led ON level (if present). @note HIGH (true) / LOW (false).
-        uint8_t int_button_pin;       // Internal button GPIO number (if present).
-        bool int_button_on_level;     // Internal button trigger level (if present). @note HIGH (true) / LOW (false).
-        uint8_t ext_button_pin;       // External button GPIO number (if present).
-        bool ext_button_on_level;     // External button trigger level (if present). @note HIGH (true) / LOW (false).
-        uint8_t sensor_pin;           // Sensor GPIO number (if present).
-        ha_sensor_type_t sensor_type; // Sensor types (if present). @note Used to identify the sensor type by ESP-NOW gateway and send the appropriate sensor status messages to MQTT.
+        uint8_t relay_pin;              // Relay GPIO number.
+        bool relay_on_level;            // Relay ON level. @note HIGH (true) / LOW (false).
+        uint8_t led_pin;                // Led GPIO number (if present).
+        bool led_on_level;              // Led ON level (if present). @note HIGH (true) / LOW (false).
+        uint8_t int_button_pin;         // Internal button GPIO number (if present).
+        bool int_button_on_level;       // Internal button trigger level (if present). @note HIGH (true) / LOW (false).
+        uint8_t ext_button_pin;         // External button GPIO number (if present).
+        bool ext_button_on_level;       // External button trigger level (if present). @note HIGH (true) / LOW (false).
+        uint8_t sensor_pin;             // Sensor GPIO number (if present).
+        ha_sensor_type_t sensor_type;   // Sensor types (if present). @note Used to identify the sensor type by ESP-NOW gateway and send the appropriate sensor status messages to MQTT.
+        uint16_t measurement_frequency; // Sensor measurement frequency (if present).
     } hardware_config;
     struct // Storage structure of switch status data.
     {

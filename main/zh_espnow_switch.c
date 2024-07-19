@@ -52,6 +52,7 @@ void zh_load_config(switch_config_t *switch_config)
     {
         nvs_set_u8(nvs_handle, "present", 0xFE);
         nvs_close(nvs_handle);
+    SETUP_INITIAL_SETTINGS:
 #ifdef CONFIG_RELAY_USING
         switch_config->hardware_config.relay_pin = CONFIG_RELAY_PIN;
 #else
@@ -95,27 +96,36 @@ void zh_load_config(switch_config_t *switch_config)
 #ifdef CONFIG_SENSOR_TYPE_DS18B20
         switch_config->hardware_config.sensor_pin = CONFIG_SENSOR_PIN;
         switch_config->hardware_config.sensor_type = HAST_DS18B20;
+        switch_config->hardware_config.measurement_frequency = CONFIG_MEASUREMENT_FREQUENCY;
 #elif CONFIG_SENSOR_TYPE_DHT
         switch_config->hardware_config.sensor_pin = CONFIG_SENSOR_PIN;
         switch_config->hardware_config.sensor_type = HAST_DHT;
+        switch_config->hardware_config.measurement_frequency = CONFIG_MEASUREMENT_FREQUENCY;
 #else
         switch_config->hardware_config.sensor_pin = ZH_NOT_USED;
         switch_config->hardware_config.sensor_type = HAST_NONE;
+        switch_config->hardware_config.measurement_frequency = ZH_NOT_USED;
 #endif
         zh_save_config(switch_config);
         return;
     }
-    nvs_get_u8(nvs_handle, "relay_pin", &switch_config->hardware_config.relay_pin);
-    nvs_get_u8(nvs_handle, "relay_lvl", (uint8_t *)&switch_config->hardware_config.relay_on_level);
-    nvs_get_u8(nvs_handle, "led_pin", &switch_config->hardware_config.led_pin);
-    nvs_get_u8(nvs_handle, "led_lvl", (uint8_t *)&switch_config->hardware_config.led_on_level);
-    nvs_get_u8(nvs_handle, "int_btn_pin", &switch_config->hardware_config.int_button_pin);
-    nvs_get_u8(nvs_handle, "int_btn_lvl", (uint8_t *)&switch_config->hardware_config.int_button_on_level);
-    nvs_get_u8(nvs_handle, "ext_btn_pin", &switch_config->hardware_config.ext_button_pin);
-    nvs_get_u8(nvs_handle, "ext_btn_lvl", (uint8_t *)&switch_config->hardware_config.ext_button_on_level);
-    nvs_get_u8(nvs_handle, "sensor_pin", &switch_config->hardware_config.sensor_pin);
-    nvs_get_u8(nvs_handle, "sensor_type", (uint8_t *)&switch_config->hardware_config.sensor_type);
+    esp_err_t err = ESP_OK;
+    err += nvs_get_u8(nvs_handle, "relay_pin", &switch_config->hardware_config.relay_pin);
+    err += nvs_get_u8(nvs_handle, "relay_lvl", (uint8_t *)&switch_config->hardware_config.relay_on_level);
+    err += nvs_get_u8(nvs_handle, "led_pin", &switch_config->hardware_config.led_pin);
+    err += nvs_get_u8(nvs_handle, "led_lvl", (uint8_t *)&switch_config->hardware_config.led_on_level);
+    err += nvs_get_u8(nvs_handle, "int_btn_pin", &switch_config->hardware_config.int_button_pin);
+    err += nvs_get_u8(nvs_handle, "int_btn_lvl", (uint8_t *)&switch_config->hardware_config.int_button_on_level);
+    err += nvs_get_u8(nvs_handle, "ext_btn_pin", &switch_config->hardware_config.ext_button_pin);
+    err += nvs_get_u8(nvs_handle, "ext_btn_lvl", (uint8_t *)&switch_config->hardware_config.ext_button_on_level);
+    err += nvs_get_u8(nvs_handle, "sensor_pin", &switch_config->hardware_config.sensor_pin);
+    err += nvs_get_u8(nvs_handle, "sensor_type", (uint8_t *)&switch_config->hardware_config.sensor_type);
+    err += nvs_get_u16(nvs_handle, "frequency", &switch_config->hardware_config.measurement_frequency);
     nvs_close(nvs_handle);
+    if (err != ESP_OK)
+    {
+        goto SETUP_INITIAL_SETTINGS;
+    }
 }
 
 void zh_save_config(const switch_config_t *switch_config)
@@ -132,6 +142,7 @@ void zh_save_config(const switch_config_t *switch_config)
     nvs_set_u8(nvs_handle, "ext_btn_lvl", switch_config->hardware_config.ext_button_on_level);
     nvs_set_u8(nvs_handle, "sensor_pin", switch_config->hardware_config.sensor_pin);
     nvs_set_u8(nvs_handle, "sensor_type", switch_config->hardware_config.sensor_type);
+    nvs_set_u16(nvs_handle, "frequency", switch_config->hardware_config.measurement_frequency);
     nvs_close(nvs_handle);
 }
 
@@ -400,7 +411,7 @@ void zh_send_sensor_config_message(const switch_config_t *switch_config)
     data.device_type = ZHDT_SENSOR;
     data.payload_type = ZHPT_CONFIG;
     data.payload_data.config_message.sensor_config_message.suggested_display_precision = 1;
-    data.payload_data.config_message.sensor_config_message.expire_after = ZH_SENSOR_STATUS_MESSAGE_FREQUENCY * 1.25; // + 25% just in case.
+    data.payload_data.config_message.sensor_config_message.expire_after = switch_config->hardware_config.measurement_frequency * 1.5; // + 50% just in case.
     data.payload_data.config_message.sensor_config_message.enabled_by_default = true;
     data.payload_data.config_message.sensor_config_message.force_update = true;
     data.payload_data.config_message.sensor_config_message.qos = 2;
@@ -473,6 +484,8 @@ void zh_send_sensor_status_message_task(void *pvParameter)
     data.device_type = ZHDT_SENSOR;
     for (;;)
     {
+        uint8_t attempts = 0;
+    READ_SENSOR:;
         esp_err_t err = ESP_OK;
         switch (switch_config->hardware_config.sensor_type)
         {
@@ -504,6 +517,11 @@ void zh_send_sensor_status_message_task(void *pvParameter)
         }
         else
         {
+            if (++attempts < ZH_SENSOR_READ_MAXIMUM_RETRY)
+            {
+                vTaskDelay(1000 / portTICK_PERIOD_MS);
+                goto READ_SENSOR;
+            }
             data.payload_type = ZHPT_ERROR;
             char *message = (char *)heap_caps_malloc(150, MALLOC_CAP_8BIT);
             memset(message, 0, 150);
@@ -512,7 +530,7 @@ void zh_send_sensor_status_message_task(void *pvParameter)
             zh_send_message(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
             heap_caps_free(message);
         }
-        vTaskDelay(ZH_SENSOR_STATUS_MESSAGE_FREQUENCY * 1000 / portTICK_PERIOD_MS);
+        vTaskDelay(switch_config->hardware_config.measurement_frequency * 1000 / portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);
 }
@@ -618,6 +636,7 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
                 switch_config->hardware_config.ext_button_on_level = data->payload_data.config_message.switch_hardware_config_message.ext_button_on_level;
                 switch_config->hardware_config.sensor_pin = data->payload_data.config_message.switch_hardware_config_message.sensor_pin;
                 switch_config->hardware_config.sensor_type = data->payload_data.config_message.switch_hardware_config_message.sensor_type;
+                switch_config->hardware_config.measurement_frequency = data->payload_data.config_message.switch_hardware_config_message.measurement_frequency;
                 zh_save_config(switch_config);
                 switch_config->gateway_is_available = false;
                 if (switch_config->hardware_config.relay_pin != ZH_NOT_USED)
