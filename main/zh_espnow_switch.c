@@ -638,7 +638,6 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
                 switch_config->hardware_config.sensor_type = data->payload_data.config_message.switch_hardware_config_message.sensor_type;
                 switch_config->hardware_config.measurement_frequency = data->payload_data.config_message.switch_hardware_config_message.measurement_frequency;
                 zh_save_config(switch_config);
-                switch_config->gateway_is_available = false;
                 if (switch_config->hardware_config.relay_pin != ZH_NOT_USED)
                 {
                     vTaskDelete(switch_config->switch_attributes_message_task);
