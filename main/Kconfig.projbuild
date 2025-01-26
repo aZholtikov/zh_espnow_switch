@@ -9,17 +9,6 @@ menu "ZH ESP-NOW Switch Configuration"
 		default 18 if IDF_TARGET_ESP32C2
 		default 19 if IDF_TARGET_ESP32C3
 		default 30 if IDF_TARGET_ESP32C6
-
-	choice NETWORK_TYPE
-		prompt "Network type"
-		help
-			Network type.
-		default NETWORK_TYPE_DIRECT
-		config NETWORK_TYPE_DIRECT
-			bool "DIRECT"
-		config NETWORK_TYPE_MESH
-			bool "MESH"
-	endchoice
 	
 	config RELAY_USING
 		bool "Enable using relay"
@@ -127,40 +116,5 @@ menu "ZH ESP-NOW Switch Configuration"
 		config EXT_BUTTON_ON_LEVEL_LOW
 			bool "LOW"
 	endchoice
-
-	config SENSOR_USING
-		depends on RELAY_USING
-		bool "Enable using external sensor"
-		default false
-		help
-			Enable using external sensor.
-
-	config SENSOR_PIN
-		depends on SENSOR_USING
-		int "Sensor GPIO number"
-		range 0 GPIO_RANGE_MAX
-		default 2
-		help
-			Sensor GPIO.
-
-	choice SENSOR_TYPE
-		depends on SENSOR_USING
-		prompt "Sensor type"
-		help
-			Sensor type.
-		default SENSOR_TYPE_DS18B20
-		config SENSOR_TYPE_DS18B20
-			bool "DS18B20"
-		config SENSOR_TYPE_DHT
-			bool "DHT"
-	endchoice
-
-	config MEASUREMENT_FREQUENCY
-		depends on SENSOR_USING
-		int "Sensor measurement frequency"
-		range 1 65536
-		default 300
-		help
-			Sensor measurement frequency.
 
 endmenu 
