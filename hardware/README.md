@@ -29,7 +29,7 @@
     Internal button GPIO number     3
     Internal button trigger level   LOW
     External button GPIO number     14
-    External button trigger level   HIGH
+    External button trigger level   LOW
 
     Using MQTT:
 
