@@ -44,7 +44,6 @@ void zh_load_config(switch_config_t *switch_config)
     uint8_t config_is_present = 0;
     if (nvs_get_u8(nvs_handle, "present", &config_is_present) == ESP_ERR_NVS_NOT_FOUND)
     {
-        nvs_set_u8(nvs_handle, "present", 0xFE);
         nvs_close(nvs_handle);
     SETUP_INITIAL_SETTINGS:
 #ifdef CONFIG_RELAY_USING
@@ -110,6 +109,7 @@ void zh_save_config(const switch_config_t *switch_config)
 {
     nvs_handle_t nvs_handle = 0;
     nvs_open("config", NVS_READWRITE, &nvs_handle);
+    nvs_set_u8(nvs_handle, "present", 0xFE);
     nvs_set_u8(nvs_handle, "relay_pin", switch_config->hardware_config.relay_pin);
     nvs_set_u8(nvs_handle, "relay_lvl", switch_config->hardware_config.relay_on_level);
     nvs_set_u8(nvs_handle, "led_pin", switch_config->hardware_config.led_pin);
@@ -129,7 +129,6 @@ void zh_load_status(switch_config_t *switch_config)
     uint8_t status_is_present = 0;
     if (nvs_get_u8(nvs_handle, "present", &status_is_present) == ESP_ERR_NVS_NOT_FOUND)
     {
-        nvs_set_u8(nvs_handle, "present", 0xFE);
         nvs_close(nvs_handle);
         zh_save_status(switch_config);
         return;
@@ -142,6 +141,7 @@ void zh_save_status(const switch_config_t *switch_config)
 {
     nvs_handle_t nvs_handle = 0;
     nvs_open("status", NVS_READWRITE, &nvs_handle);
+    nvs_set_u8(nvs_handle, "present", 0xFE);
     nvs_set_u8(nvs_handle, "relay_state", switch_config->status.status);
     nvs_close(nvs_handle);
 }
@@ -479,7 +479,7 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
         break;
     case ZH_ESPNOW_ON_SEND_EVENT:;
         zh_espnow_event_on_send_t *send_data = event_data;
-        if (send_data->status == ZH_ESPNOW_SEND_FAIL && switch_config->gateway_is_available == true)
+        if (send_data->status == ZH_ESPNOW_SEND_FAIL)
         {
             switch_config->gateway_is_available = false;
             vTaskSuspend(switch_config->switch_attributes_message_task);
