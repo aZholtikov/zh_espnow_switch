@@ -18,10 +18,11 @@ void app_main(void)
     esp_wifi_start();
     zh_espnow_init_config_t espnow_init_config = ZH_ESPNOW_INIT_CONFIG_DEFAULT();
     zh_espnow_init(&espnow_init_config);
-    xTaskCreatePinnedToCore(&zh_send_switch_attributes_message_task, "switch_attributes_message_task", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, (TaskHandle_t *)&switch_config->switch_attributes_message_task, tskNO_AFFINITY);
-    vTaskSuspend(switch_config->switch_attributes_message_task);
-    xTaskCreatePinnedToCore(&zh_send_switch_keep_alive_message_task, "switch_keep_alive_message_task", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, (TaskHandle_t *)&switch_config->switch_keep_alive_message_task, tskNO_AFFINITY);
-    vTaskSuspend(switch_config->switch_keep_alive_message_task);
+    xTaskCreatePinnedToCore(&zh_send_switch_attributes_message_task, "switch_attributes_message_task", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, NULL, tskNO_AFFINITY);
+    xTaskCreatePinnedToCore(&zh_send_switch_keep_alive_message_task, "switch_keep_alive_message_task", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, NULL, tskNO_AFFINITY);
+    xTaskCreatePinnedToCore(&zh_send_switch_config_message_task, "switch_config_message_task", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, NULL, tskNO_AFFINITY);
+    xTaskCreatePinnedToCore(&zh_send_switch_hardware_config_message_task, "switch_hardware_config_message_task", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, NULL, tskNO_AFFINITY);
+    xTaskCreatePinnedToCore(&zh_send_switch_status_message_task, "switch_status_message_task", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, NULL, tskNO_AFFINITY);
 #ifdef CONFIG_IDF_TARGET_ESP8266
     esp_event_handler_register(ZH_ESPNOW, ESP_EVENT_ANY_ID, &zh_espnow_event_handler, switch_config);
 #else
@@ -262,10 +263,7 @@ void zh_gpio_processing_task(void *pvParameter)
         switch_config->status.status = (switch_config->status.status == HAONOFT_ON) ? HAONOFT_OFF : HAONOFT_ON;
         zh_gpio_set_level(switch_config);
         zh_save_status(switch_config);
-        if (switch_config->gateway_is_available == true)
-        {
-            zh_send_switch_status_message(switch_config);
-        }
+        zh_send_switch_status_message(switch_config);
         vTaskDelay(500 / portTICK_PERIOD_MS); // To prevent button contact rattling. Value is selected experimentally.
         switch_config->gpio_processing = false;
     }
@@ -296,8 +294,9 @@ void zh_send_switch_attributes_message_task(void *pvParameter)
     vTaskDelete(NULL);
 }
 
-void zh_send_switch_config_message(const switch_config_t *switch_config)
+void zh_send_switch_config_message_task(void *pvParameter)
 {
+    switch_config_t *switch_config = pvParameter;
     zh_espnow_data_t data = {0};
     data.device_type = ZHDT_SWITCH;
     data.payload_type = ZHPT_CONFIG;
@@ -309,11 +308,17 @@ void zh_send_switch_config_message(const switch_config_t *switch_config)
     data.payload_data.config_message.switch_config_message.optimistic = false;
     data.payload_data.config_message.switch_config_message.qos = 2;
     data.payload_data.config_message.switch_config_message.retain = true;
-    zh_espnow_send(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+    for (;;)
+    {
+        zh_espnow_send(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+        vTaskDelay(ZH_SWITCH_CONFIG_MESSAGE_FREQUENCY * 1000 / portTICK_PERIOD_MS);
+    }
+    vTaskDelete(NULL);
 }
 
-void zh_send_switch_hardware_config_message(const switch_config_t *switch_config)
+void zh_send_switch_hardware_config_message_task(void *pvParameter)
 {
+    switch_config_t *switch_config = pvParameter;
     zh_espnow_data_t data = {0};
     data.device_type = ZHDT_SWITCH;
     data.payload_type = ZHPT_HARDWARE;
@@ -325,7 +330,12 @@ void zh_send_switch_hardware_config_message(const switch_config_t *switch_config
     data.payload_data.config_message.switch_hardware_config_message.int_button_on_level = switch_config->hardware_config.int_button_on_level;
     data.payload_data.config_message.switch_hardware_config_message.ext_button_pin = switch_config->hardware_config.ext_button_pin;
     data.payload_data.config_message.switch_hardware_config_message.ext_button_on_level = switch_config->hardware_config.ext_button_on_level;
-    zh_espnow_send(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+    for (;;)
+    {
+        zh_espnow_send(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+        vTaskDelay(ZH_SWITCH_HARDWARE_CONFIG_MESSAGE_FREQUENCY * 1000 / portTICK_PERIOD_MS);
+    }
+    vTaskDelete(NULL);
 }
 
 void zh_send_switch_keep_alive_message_task(void *pvParameter)
@@ -340,6 +350,21 @@ void zh_send_switch_keep_alive_message_task(void *pvParameter)
     {
         zh_espnow_send(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
         vTaskDelay(ZH_SWITCH_KEEP_ALIVE_MESSAGE_FREQUENCY * 1000 / portTICK_PERIOD_MS);
+    }
+    vTaskDelete(NULL);
+}
+
+void zh_send_switch_status_message_task(void *pvParameter)
+{
+    switch_config_t *switch_config = pvParameter;
+    zh_espnow_data_t data = {0};
+    data.device_type = ZHDT_SWITCH;
+    data.payload_type = ZHPT_STATE;
+    for (;;)
+    {
+        data.payload_data.status_message.switch_status_message.status = switch_config->status.status;
+        zh_espnow_send(switch_config->gateway_mac, (uint8_t *)&data, sizeof(zh_espnow_data_t));
+        vTaskDelay(ZH_SWITCH_STATUS_MESSAGE_FREQUENCY * 1000 / portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);
 }
@@ -371,25 +396,7 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
             switch (data->payload_type)
             {
             case ZHPT_KEEP_ALIVE:
-                if (data->payload_data.keep_alive_message.online_status == ZH_ONLINE)
-                {
-                    memcpy(switch_config->gateway_mac, recv_data->mac_addr, 6);
-                    if (switch_config->gateway_is_available == false)
-                    {
-                        switch_config->gateway_is_available = true;
-                        zh_send_switch_hardware_config_message(switch_config);
-                        zh_send_switch_config_message(switch_config);
-                        zh_send_switch_status_message(switch_config);
-                        vTaskResume(switch_config->switch_attributes_message_task);
-                        vTaskResume(switch_config->switch_keep_alive_message_task);
-                    }
-                }
-                else
-                {
-                    switch_config->gateway_is_available = false;
-                    vTaskSuspend(switch_config->switch_attributes_message_task);
-                    vTaskSuspend(switch_config->switch_keep_alive_message_task);
-                }
+                memcpy(switch_config->gateway_mac, recv_data->mac_addr, 6);
                 break;
             case ZHPT_SET:
                 switch_config->status.status = data->payload_data.status_message.switch_status_message.status;
@@ -477,14 +484,7 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
     ZH_ESPNOW_EVENT_HANDLER_EXIT:
         heap_caps_free(recv_data->data);
         break;
-    case ZH_ESPNOW_ON_SEND_EVENT:;
-        zh_espnow_event_on_send_t *send_data = event_data;
-        if (send_data->status == ZH_ESPNOW_SEND_FAIL)
-        {
-            switch_config->gateway_is_available = false;
-            vTaskSuspend(switch_config->switch_attributes_message_task);
-            vTaskSuspend(switch_config->switch_keep_alive_message_task);
-        }
+    case ZH_ESPNOW_ON_SEND_EVENT:
         break;
     default:
         break;

@@ -35,8 +35,11 @@
 #define get_app_description() esp_app_get_description()
 #endif
 
-#define ZH_SWITCH_KEEP_ALIVE_MESSAGE_FREQUENCY 10 // Frequency of sending a switch keep alive message to the gateway (in seconds).
-#define ZH_SWITCH_ATTRIBUTES_MESSAGE_FREQUENCY 60 // Frequency of sending a switch attributes message to the gateway (in seconds).
+#define ZH_SWITCH_KEEP_ALIVE_MESSAGE_FREQUENCY 10       // Frequency of sending a switch keep alive message to the gateway (in seconds).
+#define ZH_SWITCH_ATTRIBUTES_MESSAGE_FREQUENCY 60       // Frequency of sending a switch attributes message to the gateway (in seconds).
+#define ZH_SWITCH_HARDWARE_CONFIG_MESSAGE_FREQUENCY 300 // Frequency of sending a switch hardware config message to the gateway (in seconds).
+#define ZH_SWITCH_CONFIG_MESSAGE_FREQUENCY 300          // Frequency of sending a switch config message to the gateway (in seconds).
+#define ZH_SWITCH_STATUS_MESSAGE_FREQUENCY 300          // Frequency of sending a switch status message to the gateway (in seconds).
 
 #define ZH_GPIO_TASK_PRIORITY 10   // Prioritize the task of GPIO processing.
 #define ZH_GPIO_STACK_SIZE 2048    // The stack size of the task of GPIO processing.
@@ -60,15 +63,12 @@ typedef struct // Structure of data exchange between tasks, functions and event 
     {
         ha_on_off_type_t status; // Status of the zh_espnow_switch. @note Example - ON / OFF. @attention Must be same with set on switch_config_message structure (zh_config).
     } status;
-    volatile bool gpio_processing;               // GPIO processing flag. @note Used to prevent a repeated interrupt from triggering during GPIO processing.
-    volatile bool gateway_is_available;          // Gateway availability status flag. @note Used to control the tasks when the gateway connection is established / lost.
-    uint8_t gateway_mac[6];                      // Gateway MAC address.
-    TaskHandle_t switch_attributes_message_task; // Unique task handle for zh_send_switsh_attributes_message_task().
-    TaskHandle_t switch_keep_alive_message_task; // Unique task handle for zh_send_switch_keep_alive_message_task().
-    SemaphoreHandle_t button_pushing_semaphore;  // Unique semaphore handle for GPIO processing tasks.
-    const esp_partition_t *update_partition;     // Next update partition.
-    esp_ota_handle_t update_handle;              // Unique OTA handle.
-    uint16_t ota_message_part_number;            // The sequence number of the firmware upgrade part. @note Used to verify that all parts have been received.
+    volatile bool gpio_processing;              // GPIO processing flag. @note Used to prevent a repeated interrupt from triggering during GPIO processing.
+    uint8_t gateway_mac[6];                     // Gateway MAC address.
+    SemaphoreHandle_t button_pushing_semaphore; // Unique semaphore handle for GPIO processing tasks.
+    const esp_partition_t *update_partition;    // Next update partition.
+    esp_ota_handle_t update_handle;             // Unique OTA handle.
+    uint16_t ota_message_part_number;           // The sequence number of the firmware upgrade part. @note Used to verify that all parts have been received.
 } switch_config_t;
 
 /**
@@ -135,18 +135,18 @@ void zh_gpio_processing_task(void *pvParameter);
 void zh_send_switch_attributes_message_task(void *pvParameter);
 
 /**
- * @brief Function for prepare the switch configuration message and sending it to the gateway.
+ * @brief Task for prepare the switch configuration message and sending it to the gateway.
  *
- * @param[in] switch_config Pointer to the structure of data exchange between tasks, functions and event handlers.
+ * @param[in] pvParameter Pointer to the structure of data exchange between tasks, functions and event handlers.
  */
-void zh_send_switch_config_message(const switch_config_t *switch_config);
+void zh_send_switch_config_message_task(void *pvParameter);
 
 /**
- * @brief Function for prepare the switch hardware configuration message and sending it to the gateway.
+ * @brief Task for prepare the switch hardware configuration message and sending it to the gateway.
  *
- * @param[in] switch_config Pointer to the structure of data exchange between tasks, functions and event handlers.
+ * @param[in] pvParameter Pointer to the structure of data exchange between tasks, functions and event handlers.
  */
-void zh_send_switch_hardware_config_message(const switch_config_t *switch_config);
+void zh_send_switch_hardware_config_message_task(void *pvParameter);
 
 /**
  * @brief Task for prepare the switch keep alive message and sending it to the gateway.
@@ -154,6 +154,13 @@ void zh_send_switch_hardware_config_message(const switch_config_t *switch_config
  * @param[in] pvParameter Pointer to the structure of data exchange between tasks, functions and event handlers.
  */
 void zh_send_switch_keep_alive_message_task(void *pvParameter);
+
+/**
+ * @brief Task for prepare the switch status message and sending it to the gateway.
+ *
+ * @param[in] pvParameter Pointer to the structure of data exchange between tasks, functions and event handlers.
+ */
+void zh_send_switch_status_message_task(void *pvParameter);
 
 /**
  * @brief Function for prepare the switch status message and sending it to the gateway.
