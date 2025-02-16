@@ -35,16 +35,18 @@
 #define get_app_description() esp_app_get_description()
 #endif
 
-#define ZH_SWITCH_KEEP_ALIVE_MESSAGE_FREQUENCY 10       // Frequency of sending a switch keep alive message to the gateway (in seconds).
-#define ZH_SWITCH_ATTRIBUTES_MESSAGE_FREQUENCY 60       // Frequency of sending a switch attributes message to the gateway (in seconds).
-#define ZH_SWITCH_HARDWARE_CONFIG_MESSAGE_FREQUENCY 300 // Frequency of sending a switch hardware config message to the gateway (in seconds).
-#define ZH_SWITCH_CONFIG_MESSAGE_FREQUENCY 300          // Frequency of sending a switch config message to the gateway (in seconds).
-#define ZH_SWITCH_STATUS_MESSAGE_FREQUENCY 300          // Frequency of sending a switch status message to the gateway (in seconds).
+#define ZH_SWITCH_KEEP_ALIVE_MESSAGE_FREQUENCY 10      // Frequency of sending a switch keep alive message to the gateway (in seconds).
+#define ZH_SWITCH_ATTRIBUTES_MESSAGE_FREQUENCY 60      // Frequency of sending a switch attributes message to the gateway (in seconds).
+#define ZH_SWITCH_HARDWARE_CONFIG_MESSAGE_FREQUENCY 60 // Frequency of sending a switch hardware config message to the gateway (in seconds).
+#define ZH_SWITCH_CONFIG_MESSAGE_FREQUENCY 60          // Frequency of sending a switch config message to the gateway (in seconds).
+#define ZH_SWITCH_STATUS_MESSAGE_FREQUENCY 60          // Frequency of sending a switch status message to the gateway (in seconds).
 
 #define ZH_GPIO_TASK_PRIORITY 10   // Prioritize the task of GPIO processing.
 #define ZH_GPIO_STACK_SIZE 2048    // The stack size of the task of GPIO processing.
 #define ZH_MESSAGE_TASK_PRIORITY 5 // Prioritize the task of sending messages to the gateway.
 #define ZH_MESSAGE_STACK_SIZE 2048 // The stack size of the task of sending messages to the gateway.
+
+static bool is_first_boot = false;
 
 typedef struct // Structure of data exchange between tasks, functions and event handlers.
 {
@@ -130,7 +132,7 @@ void zh_gpio_processing_task(void *pvParameter);
 /**
  * @brief Task for prepare the switch attributes message and sending it to the gateway.
  *
- * @param[in,out] pvParameter Pointer to structure of data exchange between tasks, functions and event handlers.
+ * @param[in] pvParameter Pointer to structure of data exchange between tasks, functions and event handlers.
  */
 void zh_send_switch_attributes_message_task(void *pvParameter);
 

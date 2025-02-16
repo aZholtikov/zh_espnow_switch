@@ -18,11 +18,6 @@ void app_main(void)
     esp_wifi_start();
     zh_espnow_init_config_t espnow_init_config = ZH_ESPNOW_INIT_CONFIG_DEFAULT();
     zh_espnow_init(&espnow_init_config);
-    xTaskCreatePinnedToCore(&zh_send_switch_attributes_message_task, "switch_attributes_message_task", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, NULL, tskNO_AFFINITY);
-    xTaskCreatePinnedToCore(&zh_send_switch_keep_alive_message_task, "switch_keep_alive_message_task", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, NULL, tskNO_AFFINITY);
-    xTaskCreatePinnedToCore(&zh_send_switch_config_message_task, "switch_config_message_task", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, NULL, tskNO_AFFINITY);
-    xTaskCreatePinnedToCore(&zh_send_switch_hardware_config_message_task, "switch_hardware_config_message_task", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, NULL, tskNO_AFFINITY);
-    xTaskCreatePinnedToCore(&zh_send_switch_status_message_task, "switch_status_message_task", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, NULL, tskNO_AFFINITY);
 #ifdef CONFIG_IDF_TARGET_ESP8266
     esp_event_handler_register(ZH_ESPNOW, ESP_EVENT_ANY_ID, &zh_espnow_event_handler, switch_config);
 #else
@@ -397,6 +392,15 @@ void zh_espnow_event_handler(void *arg, esp_event_base_t event_base, int32_t eve
             {
             case ZHPT_KEEP_ALIVE:
                 memcpy(switch_config->gateway_mac, recv_data->mac_addr, 6);
+                if (is_first_boot == false)
+                {
+                    is_first_boot = true;
+                    xTaskCreatePinnedToCore(&zh_send_switch_attributes_message_task, "switch_attributes_message_task", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, NULL, tskNO_AFFINITY);
+                    xTaskCreatePinnedToCore(&zh_send_switch_keep_alive_message_task, "switch_keep_alive_message_task", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, NULL, tskNO_AFFINITY);
+                    xTaskCreatePinnedToCore(&zh_send_switch_config_message_task, "switch_config_message_task", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, NULL, tskNO_AFFINITY);
+                    xTaskCreatePinnedToCore(&zh_send_switch_hardware_config_message_task, "switch_hardware_config_message_task", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, NULL, tskNO_AFFINITY);
+                    xTaskCreatePinnedToCore(&zh_send_switch_status_message_task, "switch_status_message_task", ZH_MESSAGE_STACK_SIZE, switch_config, ZH_MESSAGE_TASK_PRIORITY, NULL, tskNO_AFFINITY);
+                }
                 break;
             case ZHPT_SET:
                 switch_config->status.status = data->payload_data.status_message.switch_status_message.status;
